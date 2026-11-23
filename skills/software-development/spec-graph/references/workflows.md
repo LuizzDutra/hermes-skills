@@ -174,8 +174,16 @@ Rules:
   steps, or the goal was too vague.
 - Do not add behaviours to a refactor plan. If the work changes observable
   behaviour, that part is a behaviour spec (a delta), not a step.
-- When every step is `done` and every check passes, fold the outcome into the
-  capability's spec if the structure is worth recording, then archive the plan.
+- **Before a step deletes a helper, grep for every call site.** The step's
+  check proves the symbol is gone; it says nothing about a caller still
+  pointing at it. Helpers that compute a total are called by both the read path
+  and the transition that freezes it — migrate one and the other fails at
+  runtime, not in the check.
+- When every step is `done` and every check passes, **fold and archive**: add
+  the structure as an `INV-N` in the capability's spec (refs to the new home),
+  bump its `version`, then move the plan to `.specs/archive/<capability>/` and
+  set `status: implemented`. Re-run `spec_checks.py --render` once from the new
+  path — root resolution follows any `.specs` ancestor.
 
 ## Review etiquette in chat
 

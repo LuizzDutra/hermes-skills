@@ -1,7 +1,7 @@
 ---
 name: spec-graph
 description: "Behaviour specs as YAML + reviewable graph, before code."
-version: 1.3.1
+version: 1.3.2
 author: Hermes Agent
 license: MIT
 platforms: [linux, macos, windows]
@@ -194,6 +194,12 @@ Rules:
 
 Loop: `spec_lint.py` → `spec_checks.py --render` → preview → update a status → re-run. The linter rejects dependency cycles, unknown check ids, and `touches` paths that do not exist.
 
+**Finishing.** Fold the outcome into the capability's spec as a new `INV-N`
+(refs to the new structure) and bump that spec's `version`; then move it to
+`.specs/archive/<capability>/` and set `status: implemented`. Root resolution
+follows any `.specs` ancestor, so the archived plan still lints and its checks
+still run.
+
 Do **not** track progress by editing the graph or by flipping colours: status lives in the plan, results come from the last run.
 
 ## Hard rules
@@ -215,7 +221,7 @@ Do **not** track progress by editing the graph or by flipping colours: status li
 The HTML is self-contained (no CDN) and adapts to the frame:
 
 - **Graph** — states as nodes, events as labelled edges; edge colour = worst attached behaviour; dashed = transition with no behaviour; click a node/edge for guard, effect, behaviours, refs.
-- **Behaviours** — cards grouped by status.
+- **Behaviours** — invariants and context first, then behaviour cards grouped by status.
 - **Trace** — behaviours → tests → cited files, orphans highlighted.
 - **Table** — plain reading view for review.
 - **Plan / Steps / Checks** — for `kind: refactor`: steps as a dependency graph, step cards with the attached check, and the last check run.

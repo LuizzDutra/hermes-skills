@@ -178,6 +178,13 @@ Validation rejects: dependency cycles, unknown check ids, missing `touches`
 paths, duplicate ids, unknown statuses, and `behaviours`/`machine`/`flow` inside
 a refactor plan.
 
+**Finishing a plan.** Fold the result into the capability's spec as a new
+`INV-N` (refs to the new structure, `version` bumped), then move the plan
+directory to `.specs/archive/<capability>/` and set `status: implemented`. Root
+resolution follows the `.specs` ancestor, so an archived plan still lints and
+`spec_checks.py` still runs its checks. Only the YAML is committed; the
+generated files stay ignored.
+
 ## EARS phrasing
 
 The `rule` is one sentence, always in the same order: preconditions, trigger,
