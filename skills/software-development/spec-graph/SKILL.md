@@ -133,6 +133,14 @@ must_not_change: [BEH-004]
 
 Render the new file with `--diff .specs/<capability>/spec.yaml`: added and changed behaviours get a dashed ring. After the change ships and tests pass, fold the delta into the main spec, bump `version`, and delete the delta file. Never edit a shipped spec to describe behaviour that does not exist yet.
 
+Rules that keep a delta reviewable:
+
+- **Only the affected subgraph.** The delta's `machine` copies the states and edges the change touches, not the whole machine — a copy drifts the first time the main spec moves.
+- **Write it to its own HTML.** `--out .specs/<capability>/delta-<change>.html`; the default output is `graph.html`, which would overwrite the main graph sitting in the same directory.
+- **Additive by construction.** A delta carries what changes; `--diff` reports added and changed behaviours, never removals, because the untouched ones still live in the main spec.
+- **A new operation is its own behaviour.** When a decided rule needs something the shipped spec lacks (removing a line, reassigning a coupon), add that operation as a behaviour in the delta — do not hide it inside a `when` clause.
+- **Folding can overflow the cap.** Count before folding: if the delta pushes the capability past 15 behaviours, the change belongs in a new capability (e.g. `discounts`) instead of growing the old one.
+
 ## Mode 4 — implement (approved spec → TDD)
 
 1. Order behaviours by dependency: transitions that unblock others first.
@@ -228,7 +236,7 @@ The HTML is self-contained (no CDN) and adapts to the frame:
 - **Unverified vs passing** — teal = `implemented` with no test run behind it; green appears only after `spec_verify.py` wrote `results.json`. Never read teal as done, and never "fix" it by editing the colour.
 - **Inspector** — rule, scenarios, tests with pass/fail, refs with `open` actions, and an **Ask to change this behaviour** button that sends a prompt back into the chat.
 
-Use the frame: one `::preview{file="..."}` line, no prose dump of the whole spec. Point at the 2-3 behaviours that need a decision.
+Use the frame: one `::preview{file="..."}` line, no prose dump of the whole spec. Point at the 2-3 behaviours that need a decision. When the user asks to open a graph by name, re-render it first — the file on disk may predate the last edit to the YAML.
 
 ## Red flags
 
