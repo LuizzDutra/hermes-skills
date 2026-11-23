@@ -1,0 +1,18 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+
+# Node (some skills may ship a renderer)
+node_modules/
+
+# Generated media and reports
+*.mp4
+*.mov
+*.wav
+out/
+dist/
+
+# OS noise
+.DS_Store
+Thumbs.db

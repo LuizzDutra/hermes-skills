@@ -1,0 +1,73 @@
+# Refactor plan template — `kind: refactor`
+#
+# A refactor has no new behaviour, so there are no scenarios here. What it has
+# is a structural goal, invariants that must survive, checks that prove it, and
+# ordered steps.
+
+kind: refactor
+spec: capability-id
+title: Short name for the refactor
+version: 1
+status: approved
+
+goal: >
+  The structural property that must be true at the end, written so a command
+  can check it. "Billing is a leaf module: nothing under src/billing imports
+  src/infra or src/http."
+
+repo:
+  commands:
+    test: "pytest -q --junitxml=reports/junit.xml"
+    junit: reports/junit.xml
+
+invariants:
+  - id: INV-1
+    rule: "The public API BillingClient SHALL keep its current signature."
+    refs:
+      - path: src/billing/client.py
+        symbol: BillingClient
+    tests:
+      - tests/billing/test_client.py
+
+  - id: INV-2
+    rule: "Domain errors SHALL keep their names and module."
+    refs:
+      - path: src/billing/errors.py
+        symbol: "class BillingError"
+
+checks:
+  # exit 0 means the property holds. Use `expect_exit: 1` when the command is a
+  # grep that passes by finding nothing.
+  - id: CHK-1
+    title: billing does not import infrastructure
+    run: "lint-imports --contract billing-is-leaf"
+
+  - id: CHK-2
+    title: the billing suite still passes
+    run: "pytest tests/billing -q"
+
+steps:
+  - id: S-1
+    title: Extract Money into billing/money.py
+    status: done
+    touches:
+      - path: src/billing/pricing.py
+      - path: src/billing/money.py
+    check: CHK-2
+
+  - id: S-2
+    title: Invert the repository dependency
+    status: doing
+    depends_on: [S-1]
+    note: "One caller left in pricing.py."
+    touches:
+      - path: src/billing/pricing.py
+    check: CHK-1
+
+  - id: S-3
+    title: Delete the legacy adapter
+    status: todo
+    depends_on: [S-2]
+    touches:
+      - path: src/billing/legacy.py
+    check: CHK-1

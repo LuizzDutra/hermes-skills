@@ -1,0 +1,89 @@
+# spec-graph template — copy to specs/<capability>/spec.yaml and replace every value.
+# Delete `machine` (or `flow`) when the capability has no lifecycle; micro tier
+# is behaviours only.
+
+spec: capability-id
+title: Capability name
+version: 1
+status: draft
+tier: machine
+
+objective: >
+  Who benefits, what changes for them, and what must stay true. Two or three
+  sentences — this is the paragraph you re-read when scope drifts.
+
+repo:
+  commands:
+    test: "pytest -q --junitxml=reports/junit.xml"
+    junit: reports/junit.xml
+
+conventions:
+  - id: INV-1
+    rule: "Every state change SHALL go through a method on the aggregate."
+    refs:
+      - path: src/module.py
+        symbol: "class Aggregate"
+
+context:
+  - id: CTX-1
+    note: "Money is integer cents everywhere; no floats, no rounding at the edges."
+    refs:
+      - path: src/money.py
+        symbol: to_cents
+
+machine:
+  initial: idle
+  states:
+    - id: idle
+      name: Idle
+      description: "Nothing in flight."
+    - id: running
+      name: Running
+      description: "A job is executing."
+  transitions:
+    - id: T-1
+      from: idle
+      to: running
+      event: start
+      guard: "a job is queued"
+      effect: "records started_at"
+      refs:
+        - path: src/worker.py
+          symbol: Worker.start
+
+behaviours:
+  - id: BEH-001
+    title: Starting a queued job moves it to running
+    rule: "WHEN a queued job is started THE SYSTEM SHALL record started_at and move the job to running."
+    status: draft
+    transition: T-1
+    scenarios:
+      - id: SC-001
+        given:
+          - "a job in the queue"
+        when: "the worker starts the job"
+        then:
+          - "the job is running"
+          - "started_at is set"
+    refs:
+      - path: src/worker.py
+        symbol: Worker.start
+    tests: []
+
+  - id: BEH-002
+    title: A job that is already running cannot start again
+    rule: "IF a running job is started again THEN THE SYSTEM SHALL reject it and keep the original started_at."
+    status: draft
+    transition: T-1
+    scenarios:
+      - id: SC-002
+        given:
+          - "a job that is already running"
+        when: "the worker starts it again"
+        then:
+          - "a domain error is raised"
+          - "started_at is unchanged"
+    refs:
+      - path: src/worker.py
+        symbol: Worker.start
+    tests: []
