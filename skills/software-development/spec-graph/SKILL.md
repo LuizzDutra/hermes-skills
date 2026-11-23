@@ -1,7 +1,7 @@
 ---
 name: spec-graph
 description: "Behaviour specs as YAML + reviewable graph, before code."
-version: 1.3.0
+version: 1.3.1
 author: Hermes Agent
 license: MIT
 platforms: [linux, macos, windows]

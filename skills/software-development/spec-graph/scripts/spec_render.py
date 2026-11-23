@@ -890,8 +890,23 @@ TEMPLATE = r"""<!DOCTYPE html>
         <span style="font-size:11px;letter-spacing:.07em;text-transform:uppercase;color:${MUTED}">${RANK_LABEL[k]}</span>
         <span style="font-size:11px;color:${MUTED}">${groups[k].length}</span></div>${cards}`;
     }).join("");
+    const metaCards = [
+      ...(DATA.conventions || []).map(c => `<div class="card" style="cursor:default">
+          <div class="top"><span class="id">${c.id}</span><span class="id">invariant</span></div>
+          <p>${esc(c.rule)}</p>
+          <div class="foot"><span>${c.refs.length} ref${c.refs.length === 1 ? "" : "s"}</span></div></div>`),
+      ...(DATA.context || []).map(c => `<div class="card" style="cursor:default">
+          <div class="top"><span class="id">${c.id}</span><span class="id">context</span></div>
+          <p>${esc(c.note)}</p>
+          <div class="foot"><span>${c.refs.length} ref${c.refs.length === 1 ? "" : "s"}</span></div></div>`),
+    ].join("");
+    const meta = metaCards
+      ? `<div style="grid-column:1/-1;display:flex;align-items:center;gap:8px;margin:6px 0 2px">
+           <span style="font-size:11px;letter-spacing:.07em;text-transform:uppercase;color:${MUTED}">invariants &amp; context</span>
+           <span style="font-size:11px;color:${MUTED}">${(DATA.conventions || []).length + (DATA.context || []).length}</span></div>${metaCards}`
+      : "";
     const box = $("#body-beh");
-    box.innerHTML = `<div class="cards">${html || '<div class="empty">no behaviours match</div>'}</div>`;
+    box.innerHTML = `<div class="cards">${meta}${html || '<div class="empty">no behaviours match</div>'}</div>`;
     $$("[data-beh]", box).forEach(card => card.addEventListener("click", () => showBehaviour(card.dataset.beh)));
   }
 

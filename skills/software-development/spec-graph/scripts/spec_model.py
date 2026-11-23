@@ -382,11 +382,12 @@ def find_repo_root(spec_path: str | Path) -> Path:
     """
     spec_path = Path(spec_path).resolve()
     parts = spec_path.parent.parts
-    if len(parts) >= 2 and parts[-2] in ("specs", ".specs"):
-        # <root>/.specs/<capability>/spec.yaml -> <root>
-        if len(parts) >= 3 and parts[-3] == ".hermes":
-            return Path(*parts[:-3])
-        return Path(*parts[:-2])
+    # <root>/.specs[/archive]/<capability>/spec.yaml -> <root>
+    for index in range(len(parts) - 1, 0, -1):
+        if parts[index] in (".specs", "specs"):
+            if parts[index - 1] == ".hermes":  # legacy <root>/.hermes/specs
+                return Path(*parts[:index - 1])
+            return Path(*parts[:index])
     home = Path.home().resolve()
     for parent in spec_path.parents:
         if parent == home:
