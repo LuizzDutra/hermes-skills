@@ -2,7 +2,7 @@
 """Render a spec-graph YAML file as a single-file interactive HTML graph.
 
 Usage:
-    python spec_render.py .hermes/specs/order-lifecycle/spec.yaml
+    python spec_render.py .specs/order-lifecycle/spec.yaml
     python spec_render.py spec.yaml --out graph.html --results results.json
     python spec_render.py spec.yaml --diff previous.yaml     # highlight changes
 

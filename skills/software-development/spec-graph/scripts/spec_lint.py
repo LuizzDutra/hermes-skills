@@ -2,7 +2,7 @@
 """Validate a spec-graph YAML file: schema, ids, machine wiring, file refs.
 
 Usage:
-    python spec_lint.py .hermes/specs/order-lifecycle/spec.yaml
+    python spec_lint.py .specs/order-lifecycle/spec.yaml
     python spec_lint.py spec.yaml --repo . --json
 """
 
@@ -15,7 +15,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-from spec_model import SpecError, load_spec, validate  # noqa: E402
+from spec_model import SpecError, git_state, load_spec, validate  # noqa: E402
 
 
 def main() -> int:
@@ -36,7 +36,21 @@ def main() -> int:
         return 2
 
     report = validate(spec.data, spec.root, check_refs=not args.no_refs)
+    git = git_state(spec.path, spec.root)
+    if git["repo"]:
+        generated = []
+        for name in ("graph.html", "results.json", "checks.json"):
+            candidate = spec.path.parent / name
+            if candidate.exists() and git_state(candidate, spec.root)["tracked"]:
+                generated.append(name)
+        if generated:
+            report.add_warning(
+                "generated file(s) tracked in git: " + ", ".join(generated)
+                + " — only spec.yaml belongs in the repository",
+                "git",
+            )
     payload = report.as_dict()
+    payload["git"] = git
 
     if args.json:
         print(json.dumps(payload, indent=2, ensure_ascii=False))
@@ -59,6 +73,18 @@ def main() -> int:
             f"{stats.get('behaviours', 0)} behaviours · {stats.get('scenarios', 0)} scenarios · "
             f"{stats.get('states', 0)} states · {stats.get('transitions', 0)} transitions"
         )
+    if git["repo"]:
+        if git["tracked"]:
+            print("  git      spec.yaml is tracked")
+            if git["ignored"]:
+                print(f"           also matches an ignore rule ({git['reason']}) — `git rm --cached` if that was intentional")
+        elif git["ignored"]:
+            print(f"  git      ignored — {git['reason'] or 'matched by an ignore rule'}")
+            print("           this spec stays local; do not force-add it")
+        else:
+            print("  git      untracked — stage it with the code when ready")
+    else:
+        print("  git      not a git repository")
     print()
     for item in report.errors:
         where = f" ({item['path']})" if item.get("path") else ""

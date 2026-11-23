@@ -1,7 +1,7 @@
 ---
 name: spec-graph
 description: "Behaviour specs as YAML + reviewable graph, before code."
-version: 1.2.0
+version: 1.3.0
 author: Hermes Agent
 license: MIT
 platforms: [linux, macos, windows]
@@ -37,22 +37,31 @@ propose ──▶ render ──▶ human review ──▶ implement (TDD, one be
 ## Artifacts
 
 ```
-.hermes/specs/<capability>/
+.specs/<capability>/
   spec.yaml      # commit this — source of truth and review artifact
   graph.html     # generated: interactive review surface (do not commit)
   results.json   # generated: test evidence (do not commit)
   checks.json    # generated: refactor checks (do not commit)
 ```
 
-`.hermes/` keeps the project root clean and reads as tooling to teammates who
-never install the skill. Commit the YAML (it is the decision a reviewer needs)
-and ignore the generated files:
+`.specs/` keeps the project root clean and reads as tooling to teammates who
+never install the skill.
+
+**Commit `spec.yaml`, and nothing else.** It is the decision a reviewer needs;
+everything next to it is rebuilt by the scripts:
 
 ```gitignore
-.hermes/specs/**/graph.html
-.hermes/specs/**/results.json
-.hermes/specs/**/checks.json
+.specs/**/graph.html
+.specs/**/results.json
+.specs/**/checks.json
 ```
+
+**Respect the ignore.** Before staging, run `spec_lint.py`: it prints a `git`
+line saying whether the spec is tracked, untracked, or ignored. If it is
+ignored — by `.gitignore` or `.git/info/exclude` — the file is deliberately
+local. Report that and stop: **never `git add -f` a spec**. The same holds for
+an excluded directory: do not edit `.gitignore` or `.git/info/exclude` to make
+your spec show up.
 
 Four tiers — pick the smallest honest one and say which you picked:
 
@@ -71,8 +80,8 @@ Set `SKILL` to the `skill_dir` returned by `skill_view(name='spec-graph')`.
 
 | command | does |
 |---|---|
-| `python $SKILL/scripts/spec_lint.py .hermes/specs/x/spec.yaml` | schema, ids, machine wiring, **file/symbol refs** |
-| `python $SKILL/scripts/spec_render.py .hermes/specs/x/spec.yaml` | writes `graph.html` |
+| `python $SKILL/scripts/spec_lint.py .specs/x/spec.yaml` | schema, ids, machine wiring, **file/symbol refs** |
+| `python $SKILL/scripts/spec_render.py .specs/x/spec.yaml` | writes `graph.html` |
 | `python $SKILL/scripts/spec_render.py spec.yaml --results results.json --diff old.yaml` | graph with pass/fail + change rings |
 | `python $SKILL/scripts/spec_verify.py spec.yaml --render` | runs `repo.commands.test`, parses JUnit, marks the graph |
 | `python $SKILL/scripts/spec_link.py spec.yaml --check` | fail when a linked test id no longer exists |
@@ -88,11 +97,11 @@ Set `SKILL` to the `skill_dir` returned by `skill_view(name='spec-graph')`.
 
 1. **Discover before writing.** Search the repo for entry points, the state model, existing tests and naming. Open every file you intend to cite — a ref you did not open is a guess.
 2. **State assumptions first**, as a short list, before the spec: stack, storage, auth, scope. Silence reads as consent.
-3. **Write `spec.yaml`** into `.hermes/specs/<capability>/`. Pick the tier. Every behaviour gets an EARS rule, at least one scenario, and only real refs.
+3. **Write `spec.yaml`** into `.specs/<capability>/`. Pick the tier. Every behaviour gets an EARS rule, at least one scenario, and only real refs.
 4. **Lint until clean:** `spec_lint.py`. Fix errors; read warnings (uncovered transitions are usually missing behaviours, occasionally a missing state).
 5. **Render and show it:**
    ```
-   python $SKILL/scripts/spec_render.py .hermes/specs/<cap>/spec.yaml
+   python $SKILL/scripts/spec_render.py .specs/<cap>/spec.yaml
    ```
    then put this alone on its own line in your reply: `::preview{file="<abs path>/graph.html"}`
 6. **Stop.** Summarise in 3-5 lines: tier, behaviour count, the risky parts, and **Open Questions** as a numbered list. Do not write code, do not start tests, do not "quickly scaffold" anything. Approval comes in a later turn.
@@ -114,7 +123,7 @@ An ingested spec is not an approved spec. The approval is a separate human messa
 For behaviour changes to shipped code, the spec covers **only what changes**:
 
 ```yaml
-# .hermes/specs/<capability>/delta-<change>.yaml
+# .specs/<capability>/delta-<change>.yaml
 spec: <capability>
 delta_of: <capability>
 current: "what happens today"
@@ -122,7 +131,7 @@ new: "what must happen after"
 must_not_change: [BEH-004]
 ```
 
-Render the new file with `--diff .hermes/specs/<capability>/spec.yaml`: added and changed behaviours get a dashed ring. After the change ships and tests pass, fold the delta into the main spec, bump `version`, and delete the delta file. Never edit a shipped spec to describe behaviour that does not exist yet.
+Render the new file with `--diff .specs/<capability>/spec.yaml`: added and changed behaviours get a dashed ring. After the change ships and tests pass, fold the delta into the main spec, bump `version`, and delete the delta file. Never edit a shipped spec to describe behaviour that does not exist yet.
 
 ## Mode 4 — implement (approved spec → TDD)
 
@@ -139,7 +148,7 @@ Render the new file with `--diff .hermes/specs/<capability>/spec.yaml`: added an
 ## Mode 5 — verify (evidence, not claims)
 
 ```
-python $SKILL/scripts/spec_verify.py .hermes/specs/<cap>/spec.yaml --render
+python $SKILL/scripts/spec_verify.py .specs/<cap>/spec.yaml --render
 ```
 
 It runs the repo's test command, parses JUnit, and maps cases to behaviours by the `tests:` entry in each behaviour (exact node id, or the same function at a new path). A `BEH-NNN` token in the test name is accepted **only** when the spec sets `link_style: name`. Re-render, preview, and report the table.
@@ -193,6 +202,7 @@ Do **not** track progress by editing the graph or by flipping colours: status li
 - **One `When` per scenario.** A second action is a second scenario.
 - `Then` states something observable from outside: output, stored state, a message, a status. Not "calls X", not a class name.
 - **Refs must exist.** `spec_lint.py` checks path and symbol; cite `Class.method` or a test name, and prefer symbol over line number. Every cited file must have been opened in this session.
+- **Only `spec.yaml` is committed.** Never stage `graph.html`, `results.json` or `checks.json`; never `git add -f` a spec that `.gitignore` or `.git/info/exclude` excludes.
 - **A refactor plan states a checkable goal.** If no command can tell you whether the refactor is finished, it is a task list, not a plan.
 - **Link tests in the spec, not in their names.** The default `link_style: explicit` keeps `BEH-NNN` out of the repo: tests keep their natural names, the behaviour carries `tests:`. Renamed or deleted tests are caught by `spec_link.py --check`. Use `link_style: name` only when the team wants ids in the names.
 - **Never approve your own spec.** Draft → user approves. No exceptions, including "the user seems busy".

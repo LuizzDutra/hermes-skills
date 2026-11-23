@@ -374,7 +374,7 @@ def find_repo_root(spec_path: str | Path) -> Path:
     """Resolve the repository a spec belongs to.
 
     Order:
-      1. `<root>/.hermes/specs/<capability>/spec.yaml` — the convention this skill writes
+      1. `<root>/.specs/<capability>/spec.yaml` — the convention this skill writes
       2. the nearest ancestor with a project marker, never the home directory
       3. the spec's own directory
 
@@ -382,8 +382,8 @@ def find_repo_root(spec_path: str | Path) -> Path:
     """
     spec_path = Path(spec_path).resolve()
     parts = spec_path.parent.parts
-    if len(parts) >= 2 and parts[-2] == "specs":
-        # <root>/.hermes/specs/<capability>/spec.yaml -> <root>
+    if len(parts) >= 2 and parts[-2] in ("specs", ".specs"):
+        # <root>/.specs/<capability>/spec.yaml -> <root>
         if len(parts) >= 3 and parts[-3] == ".hermes":
             return Path(*parts[:-3])
         return Path(*parts[:-2])
@@ -1195,4 +1195,44 @@ def _payload_refactor(spec: Spec, report: Report, results: dict | None, diff: di
         "counts": counts,
         "report": report.as_dict(),
         "diff": diff or {"added": [], "changed": [], "removed": []},
+    }
+
+
+# --------------------------------------------------------------------------- #
+# Git awareness (read-only)
+# --------------------------------------------------------------------------- #
+
+
+def git_state(path: Path, root: Path) -> dict:
+    """How git sees this file. Best-effort and never raises.
+
+    Returns {"repo", "tracked", "ignored", "reason"}; "reason" is the
+    .gitignore / .git/info/exclude line that matched, when ignored.
+    """
+
+    def run(*args: str):
+        try:
+            return subprocess.run(["git", *args], cwd=str(root), capture_output=True, text=True, timeout=20)
+        except Exception:
+            return None
+
+    probe = run("rev-parse", "--is-inside-work-tree")
+    if probe is None or probe.returncode != 0 or probe.stdout.strip() != "true":
+        return {"repo": False, "tracked": False, "ignored": False, "reason": ""}
+
+    try:
+        rel = str(Path(path).resolve().relative_to(Path(root).resolve())).replace("\\", "/")
+    except ValueError:
+        rel = str(path)
+
+    tracked = run("ls-files", "--error-unmatch", "--", rel)
+    ignored = run("check-ignore", "--no-index", "-v", "--", rel)
+    reason = ""
+    if ignored is not None and ignored.returncode == 0 and ignored.stdout.strip():
+        reason = ignored.stdout.strip().splitlines()[0].split("\t")[0]
+    return {
+        "repo": True,
+        "tracked": tracked is not None and tracked.returncode == 0,
+        "ignored": ignored is not None and ignored.returncode == 0,
+        "reason": reason,
     }

@@ -1,4 +1,4 @@
-# spec-graph template — copy to .hermes/specs/<capability>/spec.yaml and replace every value.
+# spec-graph template — copy to .specs/<capability>/spec.yaml and replace every value.
 # Delete `machine` (or `flow`) when the capability has no lifecycle; micro tier
 # is behaviours only.
 

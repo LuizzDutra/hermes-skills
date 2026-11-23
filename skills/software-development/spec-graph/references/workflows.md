@@ -76,7 +76,9 @@ Adopting the skill where the tests already exist.
    which is which before calling the bootstrap done.
 4. **Add `spec_link.py --check` to pre-commit or CI.** A rename then fails
    loudly instead of silently dropping coverage.
-5. Commit the spec with the code. From here the mapping is maintained, not
+5. Commit `spec.yaml` with the code — only that file, and only if git is allowed
+   to see it (`spec_lint.py` prints the state; an ignored path stays local).
+   From here the mapping is maintained, not
    rediscovered.
 
 Name-token matching (`link_style: name`) can pair a test with a behaviour that
@@ -99,7 +101,7 @@ must_not_change: [BEH-004, BEH-005]
 ```
 
 Write only the affected behaviours (new ids for new behaviour, same ids for
-changed behaviour), render with `--diff .hermes/specs/order-lifecycle/spec.yaml`, and
+changed behaviour), render with `--diff .specs/order-lifecycle/spec.yaml`, and
 show the ringed nodes. When it ships: bump the main spec, merge the behaviours,
 delete the delta.
 
@@ -127,7 +129,7 @@ approved spec, not the other way round.
 ## verify
 
 ```
-python $SKILL/scripts/spec_verify.py .hermes/specs/order-lifecycle/spec.yaml --render
+python $SKILL/scripts/spec_verify.py .specs/order-lifecycle/spec.yaml --render
 ```
 
 Report the table, not adjectives:

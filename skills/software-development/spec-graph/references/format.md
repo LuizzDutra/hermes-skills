@@ -1,8 +1,29 @@
 # spec.yaml — format reference
 
-One file per capability, at `.hermes/specs/<capability>/spec.yaml`. It is the source of
+One file per capability, at `.specs/<capability>/spec.yaml`. It is the source of
 truth: `graph.html` and the test evidence are generated from it, never edited by
 hand.
+
+## Version control
+
+`.specs/` is tooling, not architecture — but the YAML inside it is a decision
+record someone will need to review.
+
+| file | git |
+|---|---|
+| `spec.yaml` | **commit** |
+| `graph.html`, `results.json`, `checks.json` | ignore (rebuilt by the scripts) |
+
+```gitignore
+.specs/**/graph.html
+.specs/**/results.json
+.specs/**/checks.json
+```
+
+`spec_lint.py` prints the git state: `tracked`, `untracked`, or `ignored` with the
+rule that matched. An ignored spec — by `.gitignore` or `.git/info/exclude` — is
+deliberately local: leave it, never `git add -f`. A repository that tracks
+generated artifacts gets a warning.
 
 ## Top level
 
@@ -147,7 +168,7 @@ passes by finding nothing needs `expect_exit: 1`. `spec_checks.py` writes
 `checks.json`; the plan graph colours the steps and badges the check result.
 
 ```
-python spec_checks.py .hermes/specs/split-money/spec.yaml --render
+python spec_checks.py .specs/split-money/spec.yaml --render
 ```
 
 A step whose status is `done` but whose check fails is painted as a failure —
