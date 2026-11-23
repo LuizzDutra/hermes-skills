@@ -1,6 +1,6 @@
 # spec.yaml — format reference
 
-One file per capability, at `specs/<capability>/spec.yaml`. It is the source of
+One file per capability, at `.hermes/specs/<capability>/spec.yaml`. It is the source of
 truth: `graph.html` and the test evidence are generated from it, never edited by
 hand.
 
@@ -147,7 +147,7 @@ passes by finding nothing needs `expect_exit: 1`. `spec_checks.py` writes
 `checks.json`; the plan graph colours the steps and badges the check result.
 
 ```
-python spec_checks.py specs/split-money/spec.yaml --render
+python spec_checks.py .hermes/specs/split-money/spec.yaml --render
 ```
 
 A step whose status is `done` but whose check fails is painted as a failure —

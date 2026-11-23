@@ -99,7 +99,7 @@ must_not_change: [BEH-004, BEH-005]
 ```
 
 Write only the affected behaviours (new ids for new behaviour, same ids for
-changed behaviour), render with `--diff specs/order-lifecycle/spec.yaml`, and
+changed behaviour), render with `--diff .hermes/specs/order-lifecycle/spec.yaml`, and
 show the ringed nodes. When it ships: bump the main spec, merge the behaviours,
 delete the delta.
 
@@ -127,7 +127,7 @@ approved spec, not the other way round.
 ## verify
 
 ```
-python $SKILL/scripts/spec_verify.py specs/order-lifecycle/spec.yaml --render
+python $SKILL/scripts/spec_verify.py .hermes/specs/order-lifecycle/spec.yaml --render
 ```
 
 Report the table, not adjectives:

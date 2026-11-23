@@ -37,10 +37,21 @@ propose ──▶ render ──▶ human review ──▶ implement (TDD, one be
 ## Artifacts
 
 ```
-specs/<capability>/
-  spec.yaml      # source of truth, hand-editable, version-controlled
-  graph.html     # generated: interactive review surface
-  results.json   # generated: test evidence
+.hermes/specs/<capability>/
+  spec.yaml      # commit this — source of truth and review artifact
+  graph.html     # generated: interactive review surface (do not commit)
+  results.json   # generated: test evidence (do not commit)
+  checks.json    # generated: refactor checks (do not commit)
+```
+
+`.hermes/` keeps the project root clean and reads as tooling to teammates who
+never install the skill. Commit the YAML (it is the decision a reviewer needs)
+and ignore the generated files:
+
+```gitignore
+.hermes/specs/**/graph.html
+.hermes/specs/**/results.json
+.hermes/specs/**/checks.json
 ```
 
 Four tiers — pick the smallest honest one and say which you picked:
@@ -60,8 +71,8 @@ Set `SKILL` to the `skill_dir` returned by `skill_view(name='spec-graph')`.
 
 | command | does |
 |---|---|
-| `python $SKILL/scripts/spec_lint.py specs/x/spec.yaml` | schema, ids, machine wiring, **file/symbol refs** |
-| `python $SKILL/scripts/spec_render.py specs/x/spec.yaml` | writes `graph.html` |
+| `python $SKILL/scripts/spec_lint.py .hermes/specs/x/spec.yaml` | schema, ids, machine wiring, **file/symbol refs** |
+| `python $SKILL/scripts/spec_render.py .hermes/specs/x/spec.yaml` | writes `graph.html` |
 | `python $SKILL/scripts/spec_render.py spec.yaml --results results.json --diff old.yaml` | graph with pass/fail + change rings |
 | `python $SKILL/scripts/spec_verify.py spec.yaml --render` | runs `repo.commands.test`, parses JUnit, marks the graph |
 | `python $SKILL/scripts/spec_link.py spec.yaml --check` | fail when a linked test id no longer exists |
@@ -77,11 +88,11 @@ Set `SKILL` to the `skill_dir` returned by `skill_view(name='spec-graph')`.
 
 1. **Discover before writing.** Search the repo for entry points, the state model, existing tests and naming. Open every file you intend to cite — a ref you did not open is a guess.
 2. **State assumptions first**, as a short list, before the spec: stack, storage, auth, scope. Silence reads as consent.
-3. **Write `spec.yaml`** into `specs/<capability>/`. Pick the tier. Every behaviour gets an EARS rule, at least one scenario, and only real refs.
+3. **Write `spec.yaml`** into `.hermes/specs/<capability>/`. Pick the tier. Every behaviour gets an EARS rule, at least one scenario, and only real refs.
 4. **Lint until clean:** `spec_lint.py`. Fix errors; read warnings (uncovered transitions are usually missing behaviours, occasionally a missing state).
 5. **Render and show it:**
    ```
-   python $SKILL/scripts/spec_render.py specs/<cap>/spec.yaml
+   python $SKILL/scripts/spec_render.py .hermes/specs/<cap>/spec.yaml
    ```
    then put this alone on its own line in your reply: `::preview{file="<abs path>/graph.html"}`
 6. **Stop.** Summarise in 3-5 lines: tier, behaviour count, the risky parts, and **Open Questions** as a numbered list. Do not write code, do not start tests, do not "quickly scaffold" anything. Approval comes in a later turn.
@@ -103,7 +114,7 @@ An ingested spec is not an approved spec. The approval is a separate human messa
 For behaviour changes to shipped code, the spec covers **only what changes**:
 
 ```yaml
-# specs/<capability>/delta-<change>.yaml
+# .hermes/specs/<capability>/delta-<change>.yaml
 spec: <capability>
 delta_of: <capability>
 current: "what happens today"
@@ -111,7 +122,7 @@ new: "what must happen after"
 must_not_change: [BEH-004]
 ```
 
-Render the new file with `--diff specs/<capability>/spec.yaml`: added and changed behaviours get a dashed ring. After the change ships and tests pass, fold the delta into the main spec, bump `version`, and delete the delta file. Never edit a shipped spec to describe behaviour that does not exist yet.
+Render the new file with `--diff .hermes/specs/<capability>/spec.yaml`: added and changed behaviours get a dashed ring. After the change ships and tests pass, fold the delta into the main spec, bump `version`, and delete the delta file. Never edit a shipped spec to describe behaviour that does not exist yet.
 
 ## Mode 4 — implement (approved spec → TDD)
 
@@ -128,7 +139,7 @@ Render the new file with `--diff specs/<capability>/spec.yaml`: added and change
 ## Mode 5 — verify (evidence, not claims)
 
 ```
-python $SKILL/scripts/spec_verify.py specs/<cap>/spec.yaml --render
+python $SKILL/scripts/spec_verify.py .hermes/specs/<cap>/spec.yaml --render
 ```
 
 It runs the repo's test command, parses JUnit, and maps cases to behaviours by the `tests:` entry in each behaviour (exact node id, or the same function at a new path). A `BEH-NNN` token in the test name is accepted **only** when the spec sets `link_style: name`. Re-render, preview, and report the table.

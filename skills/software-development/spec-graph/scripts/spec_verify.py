@@ -2,7 +2,7 @@
 """Run the repository's tests and map pass/fail back onto spec behaviours.
 
 Usage:
-    python spec_verify.py specs/order-lifecycle/spec.yaml
+    python spec_verify.py .hermes/specs/order-lifecycle/spec.yaml
     python spec_verify.py spec.yaml --no-run --junit reports/junit.xml
     python spec_verify.py spec.yaml --render          # verify, then redraw the graph
 

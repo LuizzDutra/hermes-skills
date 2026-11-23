@@ -2,7 +2,7 @@
 """Validate a spec-graph YAML file: schema, ids, machine wiring, file refs.
 
 Usage:
-    python spec_lint.py specs/order-lifecycle/spec.yaml
+    python spec_lint.py .hermes/specs/order-lifecycle/spec.yaml
     python spec_lint.py spec.yaml --repo . --json
 """
 

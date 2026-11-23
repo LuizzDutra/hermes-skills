@@ -374,7 +374,7 @@ def find_repo_root(spec_path: str | Path) -> Path:
     """Resolve the repository a spec belongs to.
 
     Order:
-      1. `<root>/specs/<capability>/spec.yaml` — the convention this skill writes
+      1. `<root>/.hermes/specs/<capability>/spec.yaml` — the convention this skill writes
       2. the nearest ancestor with a project marker, never the home directory
       3. the spec's own directory
 
@@ -383,6 +383,9 @@ def find_repo_root(spec_path: str | Path) -> Path:
     spec_path = Path(spec_path).resolve()
     parts = spec_path.parent.parts
     if len(parts) >= 2 and parts[-2] == "specs":
+        # <root>/.hermes/specs/<capability>/spec.yaml -> <root>
+        if len(parts) >= 3 and parts[-3] == ".hermes":
+            return Path(*parts[:-3])
         return Path(*parts[:-2])
     home = Path.home().resolve()
     for parent in spec_path.parents:

@@ -31,6 +31,8 @@ made from chat prose.
   with status, so progress and evidence live in the same picture.
 - The scripts are standard library only — they ship their own YAML subset parser
   and run on a bare Python 3.9+.
+- Specs live in `.hermes/specs/<capability>/spec.yaml` — commit that file, ignore
+  the generated `graph.html`, `results.json` and `checks.json`.
 - `graph.html` is generated: self-contained, no CDN, inherits the host theme.
 
 The gate is `python scripts/spec_lint.py <spec>`; `spec_render.py` builds the

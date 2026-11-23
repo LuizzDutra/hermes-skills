@@ -5,7 +5,7 @@ A check is a command that exits 0 when the structural property holds. `grep`
 style checks usually need `expect_exit: 1` (no matches found).
 
 Usage:
-    python spec_checks.py specs/split-money/spec.yaml
+    python spec_checks.py .hermes/specs/split-money/spec.yaml
     python spec_checks.py spec.yaml --only CHK-1 --json
     python spec_checks.py spec.yaml --render     # checks, then redraw the plan
 """
