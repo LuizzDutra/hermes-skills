@@ -73,6 +73,9 @@ def main() -> int:
 
         old = parse_yaml(Path(args.diff).read_text(encoding="utf-8")) or {}
         diff = diff_specs(old, spec.data)
+        if spec.data.get("delta_of"):
+            # a delta only carries what changes; the untouched behaviours are not "removed"
+            diff["removed"] = []
 
     payload = build_payload(spec, report, results=results, diff=diff, check_refs=not args.no_refs)
     payload["rendered"] = datetime.now(timezone.utc).astimezone().isoformat(timespec="seconds")
@@ -624,9 +627,13 @@ TEMPLATE = r"""<!DOCTYPE html>
     if (!a || !b) return null;
     if (e.from === e.to) {
       const r = a.r;
+      // several self-loops on one state must not draw on top of each other
+      const loops = m.edges.filter(o => o.from === e.from && o.to === e.from);
+      const k = loops.length > 1 ? loops.indexOf(e) - (loops.length - 1) / 2 : 0;
+      const lift = 1 + k * 0.4;
       return {
-        d: `M ${a.x - r * 0.55} ${a.y - r * 0.83} C ${a.x - r * 1.5} ${a.y - r * 2.2}, ${a.x + r * 1.5} ${a.y - r * 2.2}, ${a.x + r * 0.55} ${a.y - r * 0.83}`,
-        lx: a.x, ly: a.y - r * 1.95,
+        d: `M ${a.x - r * 0.55} ${a.y - r * 0.83} C ${a.x - r * 1.5 * lift} ${a.y - r * 2.2 * lift}, ${a.x + r * 1.5 * lift} ${a.y - r * 2.2 * lift}, ${a.x + r * 0.55} ${a.y - r * 0.83}`,
+        lx: a.x, ly: a.y - r * 1.98 * lift,
       };
     }
     const dx = b.x - a.x, dy = b.y - a.y;
@@ -736,7 +743,9 @@ TEMPLATE = r"""<!DOCTYPE html>
       }, gNodes);
       el("circle", { r: n.r, fill: color, "fill-opacity": "0.10", stroke: color, "stroke-width": health === "none" ? 1.3 : 2 }, g);
       if (n.id === state.sel) el("circle", { r: n.r + 5, fill: "none", stroke: ACC, "stroke-width": 1.5, "stroke-dasharray": "3 3" }, g);
-      if (diffs.has(n.id)) el("circle", { r: n.r + 9, fill: "none", stroke: PAL.changed, "stroke-width": 1.2, "stroke-dasharray": "2 3" }, g);
+      // a state is touched when one of the behaviours attached to it changed
+      const touched = diffs.has(n.id) || behs.some(id => diffs.has(id));
+      if (touched) el("circle", { r: n.r + 9, fill: "none", stroke: PAL.changed, "stroke-width": 1.4, "stroke-dasharray": "2 3" }, g);
 
       const lines = wrap(n.name, IS_REF ? 15 : 12, IS_REF ? 4 : 3);
       const tip = el("title", {}, g);
@@ -880,7 +889,9 @@ TEMPLATE = r"""<!DOCTYPE html>
         const dim = !matches(b);
         return `<div class="card ${dim ? "dim" : ""}" data-beh="${b.id}">
           <div class="top"><span class="tdot" style="background:${PAL[k]}"></span>
-            <span class="id">${b.id}</span>${b.transition ? `<span class="id">${b.transition}</span>` : ""}</div>
+            <span class="id">${b.id}</span>${b.transition ? `<span class="id">${b.transition}</span>` : ""}
+            ${DATA.diff?.added?.includes(b.id) ? `<span class="pill" style="color:${PAL.added};border-color:currentColor">new</span>`
+              : DATA.diff?.changed?.includes(b.id) ? `<span class="pill" style="color:${PAL.changed};border-color:currentColor">changed</span>` : ""}</div>
           <h3>${b.title}</h3><p>${b.rule}</p>
           <div class="foot"><span>${b.scenarios.length} scenario${b.scenarios.length === 1 ? "" : "s"}</span>
             <span>${b.tests.length} test${b.tests.length === 1 ? "" : "s"}</span>

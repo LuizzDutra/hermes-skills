@@ -32,9 +32,24 @@ that fails offline.
 - **Colour is status, never decoration.** Edge colour = worst attached
   behaviour; step colour = plan status; a `done` step with a failing check stays
   red. Never "fix" a red node by changing the palette.
+- **Diff rings key off behaviours, not states.** The diff set holds `BEH-…` ids;
+  a state is touched when one of the behaviours attached to its edges is in that
+  set. Comparing the state id to the diff set never matches, and a delta renders
+  as if nothing changed.
+- **Stacked self-loops need an index.** Two transitions on one state draw the
+  same arc; offset each loop by its position (`lift = 1 + k * 0.4`) or one edge
+  hides the other and both labels collide.
 - **Long node titles wrap, they do not vanish.** Four lines with an ellipsis
   plus a `<title>` tooltip for plan steps; three lines for states. Truncating
   silently loses the thing the reviewer needs.
+- **Measure the container after it is displayed.** `renderTrace()` sizes its
+  columns from `box.clientWidth`; a flex child with auto width measures 0 before
+  it has content, so the canvas silently falls back to a 700px viewBox and every
+  label scales with it. Give the panels `flex:1;min-width:0` and read the width
+  only after the tab's `display` is set.
+- **Derive label budgets from the measured width, not a fixed character count.**
+  Trace columns are percentage widths; a hard `slice(0, 34)` clips mid-word at
+  narrow frames. Compute the budget from the column width and cut with `…`.
 - **No hand edits.** If a label is wrong, the YAML or the payload is wrong.
 
 ## Theme
