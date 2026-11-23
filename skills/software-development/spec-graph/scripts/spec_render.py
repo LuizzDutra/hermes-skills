@@ -154,6 +154,7 @@ TEMPLATE = r"""<!DOCTYPE html>
     background:var(--card);padding:2px 4px;border-radius:6px;pointer-events:none}
   .legend i{display:inline-block;width:11px;height:9px;border-radius:3px;margin-right:5px;vertical-align:middle}
   .legend span{white-space:nowrap}
+  #body-beh,#body-trace,#body-table{flex:1;min-width:0}
   #inspector{flex:0 0 320px;width:320px;max-height:700px;overflow:auto;
     border:1px solid var(--bd);border-radius:12px;background:var(--card);
     padding:14px;display:none}
@@ -911,6 +912,12 @@ TEMPLATE = r"""<!DOCTYPE html>
   }
 
   // ---- trace -------------------------------------------------------------
+  function shortLabel(text, max, fromEnd = false) {
+    const value = String(text).replace(/^tests\//, "");
+    if (value.length <= max) return value;
+    return fromEnd ? "…" + value.slice(-(max - 1)) : value.slice(0, max - 1) + "…";
+  }
+
   function renderTrace() {
     const box = $("#body-trace");
     const tests = new Map();
@@ -926,7 +933,14 @@ TEMPLATE = r"""<!DOCTYPE html>
       files.get(r.path).behs.push(b.id);
       if (r.ok === false) files.get(r.path).bad = true;
     }));
-    const W = box.clientWidth || 700, H = 560, COL = [40, W * 0.36, W * 0.70];
+    const W = box.clientWidth || 700, H = 560;
+    // wider gutters than the old 0.36/0.70 columns: the connector lines need room
+    const BX = 40, BW = W * 0.27;
+    const TX = W * 0.45, TW = W * 0.27;
+    const FX = W * 0.77, FW = W * 0.21;
+    const bChars = Math.max(14, Math.floor((BW - 60) / 6.1));
+    const tChars = Math.max(16, Math.floor((TW - 28) / 5.6));
+    const fChars = Math.max(12, Math.floor((FW - 18) / 5.6));
     const svgT = `<svg viewBox="0 0 ${W} ${H}" style="width:100%;height:${H}px;display:block">
       <defs><marker id="tarrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto">
         <path d="M0 0 L10 5 L0 10 z" fill="${MUTED}"/></marker></defs>`;
@@ -938,20 +952,20 @@ TEMPLATE = r"""<!DOCTYPE html>
     let edges = "", nodes = "";
     DATA.behaviours.forEach(b => {
       const y = bY.get(b.id);
-      nodes += `<g><rect x="${COL[0]}" y="${y - bH / 2}" width="${W * 0.30}" height="${bH}" rx="7"
+      nodes += `<g><rect x="${BX}" y="${y - bH / 2}" width="${BW}" height="${bH}" rx="7"
         fill="${PAL[effective(b)]}" fill-opacity=".10" stroke="${PAL[effective(b)]}" stroke-width="1.2"/>
-        <text x="${COL[0] + 8}" y="${y + 1}" dominant-baseline="middle" font-size="10.5"
+        <text x="${BX + 8}" y="${y + 1}" dominant-baseline="middle" font-size="10.5"
           font-family="var(--mono)" fill="${FG}">${b.id}</text>
-        <text x="${COL[0] + 52}" y="${y + 1}" dominant-baseline="middle" font-size="10.5"
-          fill="${MUTED}">${b.title.slice(0, 26)}${b.title.length > 26 ? "…" : ""}</text></g>`;
+        <text x="${BX + 52}" y="${y + 1}" dominant-baseline="middle" font-size="10.5"
+          fill="${MUTED}">${b.title.slice(0, bChars)}${b.title.length > bChars ? "…" : ""}</text></g>`;
       (b.tests || []).forEach(t => {
         const ty = tY.get(t); if (ty === undefined) return;
-        edges += `<path d="M ${COL[0] + W * 0.30} ${y} C ${COL[0] + W * 0.32} ${y}, ${COL[1] - 14} ${ty}, ${COL[1]} ${ty}"
-          fill="none" stroke="${PAL[effective(b)]}" stroke-opacity=".5" stroke-width="1"/>`;
+        edges += `<path d="M ${BX + BW} ${y} C ${BX + BW + (TX - BX - BW) * 0.4} ${y}, ${TX - 16} ${ty}, ${TX} ${ty}"
+          fill="none" stroke="${PAL[effective(b)]}" stroke-opacity=".55" stroke-width="1"/>`;
       });
       b.refs.forEach(r => {
         const fy = fY.get(r.path); if (fy === undefined) return;
-        edges += `<path d="M ${COL[0] + W * 0.30} ${y} C ${COL[0] + W * 0.34} ${y}, ${COL[2] - 14} ${fy}, ${COL[2]} ${fy}"
+        edges += `<path d="M ${BX + BW} ${y} C ${BX + BW + (FX - BX - BW) * 0.35} ${y}, ${FX - 16} ${fy}, ${FX} ${fy}"
           fill="none" stroke="${BD}" stroke-width="1" stroke-dasharray="3 3"/>`;
       });
     });
@@ -960,18 +974,18 @@ TEMPLATE = r"""<!DOCTYPE html>
       const linked = info.behs.length > 0;
       const res = DATA.behaviours.flatMap(b => b.results || []).find(x => x.name === name);
       const dot = res ? (res.ok ? PAL.implemented : PAL.fail) : MUTED;
-      nodes += `<g><rect x="${COL[1]}" y="${y - tH / 2}" width="${W * 0.30}" height="${tH}" rx="6"
+      nodes += `<g><rect x="${TX}" y="${y - tH / 2}" width="${TW}" height="${tH}" rx="6"
         fill="transparent" stroke="${linked ? BD : PAL.missing}" stroke-dasharray="${linked ? "" : "4 4"}" stroke-width="1.2"/>
-        <circle cx="${COL[1] + 10}" cy="${y}" r="3.2" fill="${dot}"/>
-        <text x="${COL[1] + 20}" y="${y + 1}" dominant-baseline="middle" font-size="9.5"
-          font-family="var(--mono)" fill="${linked ? FG : MUTED}">${name.replace(/^tests\//, "").slice(0, 34)}</text></g>`;
+        <circle cx="${TX + 10}" cy="${y}" r="3.2" fill="${dot}"/>
+        <text x="${TX + 20}" y="${y + 1}" dominant-baseline="middle" font-size="9.5"
+          font-family="var(--mono)" fill="${linked ? FG : MUTED}">${shortLabel(name, tChars)}</text></g>`;
     });
     [...files.entries()].forEach(([path, info]) => {
       const y = fY.get(path);
-      nodes += `<g><rect x="${COL[2]}" y="${y - fH / 2}" width="${W * 0.28}" height="${fH}" rx="5"
+      nodes += `<g><rect x="${FX}" y="${y - fH / 2}" width="${FW}" height="${fH}" rx="5"
         fill="transparent" stroke="${info.bad ? PAL.fail : BD}" stroke-width="1"/>
-        <text x="${COL[2] + 8}" y="${y + 1}" dominant-baseline="middle" font-size="9.5"
-          font-family="var(--mono)" fill="${info.bad ? PAL.fail : MUTED}">${path.slice(-40)}</text></g>`;
+        <text x="${FX + 8}" y="${y + 1}" dominant-baseline="middle" font-size="9.5"
+          font-family="var(--mono)" fill="${info.bad ? PAL.fail : MUTED}">${shortLabel(path, fChars, true)}</text></g>`;
     });
     const orphans = DATA.behaviours.filter(b => !b.tests || !b.tests.length).length;
     box.innerHTML = `<div style="display:flex;gap:16px;align-items:baseline;margin-bottom:6px">
