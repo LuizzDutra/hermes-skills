@@ -438,6 +438,9 @@ TEMPLATE = r"""<!DOCTYPE html>
     insp.innerHTML = `<button class="close" aria-label="close">×</button>` + html;
     insp.classList.add("open");
     if (state.tab === "graph") { state.fitted = false; draw(); focusNode(focusId); }
+    // Below 880px the panel is a block under the graph: opening it out of view
+    // reads as "the click did nothing".
+    if (getComputedStyle(insp).position === "static") insp.scrollIntoView({ block: "nearest" });
     $(".close", insp).addEventListener("click", closeInspector);
     $$("[data-hermes-send]", insp).forEach(el => { /* native dispatch handled by the host */ });
   }
