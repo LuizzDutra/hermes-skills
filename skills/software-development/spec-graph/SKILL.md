@@ -97,7 +97,7 @@ Set `SKILL` to the `skill_dir` returned by `skill_view(name='spec-graph')`.
 
 1. **Discover before writing.** Search the repo for entry points, the state model, existing tests and naming. Open every file you intend to cite — a ref you did not open is a guess.
 2. **State assumptions first**, as a short list, before the spec: stack, storage, auth, scope. Silence reads as consent.
-3. **Write `spec.yaml`** into `.specs/<capability>/`. Pick the tier. Every behaviour gets an EARS rule, at least one scenario, and only real refs.
+3. **Write `spec.yaml`** into `.specs/<capability>/`. Pick the tier. Every behaviour gets an EARS rule, at least one scenario, and only real refs. Probe `repo.commands.test` before trusting it: run one fast test with the JUnit flag and check the XML lands. Point `repo.commands.junit` inside the spec dir (already ignored); a fresh `reports/` dir would be an untracked artifact outside the ignore rules.
 4. **Lint until clean:** `spec_lint.py`. Fix errors; read warnings (uncovered transitions are usually missing behaviours, occasionally a missing state).
 5. **Render and show it:**
    ```
@@ -232,7 +232,7 @@ Do **not** track progress by editing the graph or by flipping colours: status li
 
 ## Hard rules
 
-- Every `rule` contains **SHALL** (EARS). If you cannot phrase it that way, you do not yet know the behaviour.
+- Every `rule` contains **SHALL** (EARS). If you cannot phrase it that way, you do not yet know the behaviour. The token is literal: in a non-English repo keep the sentence in the repo's language but still write `O SISTEMA SHALL ...` — the linter greps for the word, not the grammar, and a fully translated rule (`DEVE`) fails lint.
 - **One `When` per scenario.** A second action is a second scenario.
 - `Then` states something observable from outside: output, stored state, a message, a status. Not "calls X", not a class name.
 - **Refs must exist.** `spec_lint.py` checks path and symbol; cite `Class.method` or a test name, and prefer symbol over line number. Every cited file must have been opened in this session.
