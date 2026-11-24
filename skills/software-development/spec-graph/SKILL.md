@@ -1,7 +1,7 @@
 ---
 name: spec-graph
 description: "Behaviour specs as YAML + reviewable graph, before code."
-version: 1.3.10
+version: 1.3.11
 author: Hermes Agent
 license: MIT
 platforms: [linux, macos, windows]
@@ -258,6 +258,8 @@ The HTML is self-contained (no CDN) and adapts to the frame:
 - **Inspector** — rule, scenarios, tests with pass/fail, refs with `open` actions, and an **Ask to change this behaviour** button that sends a prompt back into the chat. Each scenario block inside the behaviour opens `showScenario` (id, `given`, `when`, `then` one item per line, and a link back to the behaviour); invariant and context cards open the same panel through `showMeta`. Anything that clamps in a card or in the graph label must be readable in the inspector — a truncated rule with no destination is a dead end.
 
 Use the frame: one `::preview{file="..."}` line, no prose dump of the whole spec. Point at the 2-3 behaviours that need a decision. When the user asks to open a graph by name, re-render it first — the file on disk may predate the last edit to the YAML.
+
+**Click paths need real pointer input.** A `dispatchEvent(new MouseEvent('click'))` probe never goes through `setPointerCapture`, which the pan gesture installs — so it can pass while a real click on a node opens nothing. Probe with `Input.dispatchMouseEvent` (press + release at the element's screen centre), and re-render before showing the graph: a stale `graph.html` looks like a broken click.
 
 ## Red flags
 

@@ -152,6 +152,8 @@ TEMPLATE = r"""<!DOCTYPE html>
   #stage{position:relative;flex:1;height:620px;border:1px solid var(--bd);border-radius:12px;overflow:hidden;background:transparent}
   #stage svg{width:100%;height:100%;display:block;cursor:grab;touch-action:none}
   #stage svg.dragging{cursor:grabbing}
+  #stage svg g[tabindex]:focus{outline:none}
+  #stage svg g[tabindex]:focus-visible{outline:2px solid var(--acc);outline-offset:4px}
   #stage.no-graph{display:none}
   .legend{position:absolute;left:10px;bottom:8px;display:flex;gap:10px;flex-wrap:wrap;font-size:11px;color:var(--muted);
     background:var(--card);padding:2px 4px;border-radius:6px;pointer-events:none}
@@ -767,13 +769,30 @@ TEMPLATE = r"""<!DOCTYPE html>
       const path = el("path", {
         d: geo.d, fill: "none", stroke: color, "stroke-width": uncovered ? 1.4 : 1.8,
         "stroke-dasharray": uncovered ? "5 5" : null, "marker-end": "url(#arrow)",
-        opacity: dim ? 0.16 : 0.95,
+        opacity: dim ? 0.16 : 0.95, "data-hit": "edge",
       }, gEdges);
       path.style.cursor = "pointer";
-      path.addEventListener("click", ev => { ev.stopPropagation(); IS_REF ? showStep(e.to) : showTransition(e.transition); });
+      const openEdge = ev => {
+        ev.stopPropagation();
+        if (IS_REF) return showStep(e.to);
+        if (e.transition) return showTransition(e.transition);
+        // A `flow` arrow is a `next` link, not a transition: show the step it leads to.
+        const target = (window.__model && window.__model.byId) ? window.__model.byId[e.to] : null;
+        if (target) showState(target, [], []);
+      };
+      path.addEventListener("click", openEdge);
+      // 1.8px is an unfair click target, and a `flow` arrow has no label at all:
+      // an invisible wider stroke takes the hit without changing the drawing.
+      el("path", {
+        d: geo.d, fill: "none", stroke: "transparent", "stroke-width": "14",
+        "pointer-events": "stroke", "data-hit": "edge", style: "cursor:pointer",
+      }, gEdges).addEventListener("click", openEdge);
 
       if (e.event) {
-        const label = el("g", { opacity: dim ? 0.2 : 1, transform: `translate(${geo.lx},${geo.ly})` }, gEdges);
+        const label = el("g", { opacity: dim ? 0.2 : 1, transform: `translate(${geo.lx},${geo.ly})`, "data-hit": "edge" }, gEdges);
+        // The label sits on top of the 1.8px path, so it has to be the click target too.
+        label.style.cursor = "pointer";
+        label.addEventListener("click", openEdge);
         const text = el("text", {
           "text-anchor": "middle", "dominant-baseline": "middle", "font-size": "12.5",
           "font-family": "var(--mono)", fill: FG, "paint-order": "stroke",
@@ -816,7 +835,7 @@ TEMPLATE = r"""<!DOCTYPE html>
            !behs.some(id => matches(behById[id])));
       const g = el("g", {
         transform: `translate(${n.x},${n.y})`, opacity: dim ? 0.2 : 1,
-        style: "cursor:pointer", tabindex: "0", role: "button",
+        style: "cursor:pointer", tabindex: "0", role: "button", "data-hit": "node",
       }, gNodes);
       el("circle", { r: n.r, fill: color, "fill-opacity": "0.10", stroke: color, "stroke-width": health === "none" ? 1.3 : 2 }, g);
       if (n.id === state.sel) el("circle", { r: n.r + 5, fill: "none", stroke: ACC, "stroke-width": 1.5, "stroke-dasharray": "3 3" }, g);
@@ -887,7 +906,7 @@ TEMPLATE = r"""<!DOCTYPE html>
   }
 
   function bindViewport(W, H) {
-    let dragging = false, moved = false, sx = 0, sy = 0, ox = 0, oy = 0;
+    let dragging = false, moved = false, sx = 0, sy = 0, ox = 0, oy = 0, suppressClick = false;
     const vt = { x: 0, y: 0, k: 1 };
     const apply = () => view.setAttribute("transform", `translate(${vt.x},${vt.y}) scale(${vt.k})`);
     window.__applyView = apply; window.__vt = vt;
@@ -896,7 +915,11 @@ TEMPLATE = r"""<!DOCTYPE html>
       if (e.button !== 0) return;
       dragging = true; moved = false;
       sx = e.clientX; sy = e.clientY; ox = vt.x; oy = vt.y;
-      svg.classList.add("dragging"); svg.setPointerCapture(e.pointerId);
+      svg.classList.add("dragging");
+      // Capturing the pointer retargets the trailing `click` at the <svg>, so a
+      // click on a node would never reach its own handler. Only capture when the
+      // gesture starts on empty canvas — that is the case that pans.
+      if (!(e.target.closest && e.target.closest("[data-hit]"))) svg.setPointerCapture(e.pointerId);
     });
     svg.addEventListener("pointermove", e => {
       if (!dragging) return;
@@ -907,8 +930,17 @@ TEMPLATE = r"""<!DOCTYPE html>
     const stop = e => {
       if (!dragging) return;
       dragging = false; svg.classList.remove("dragging");
-      if (!moved) { /* background click */ state.sel = null; insp.classList.remove("open"); }
+      suppressClick = moved;   // a pan must not open the panel it started on
+      if (moved) return;
+      const hit = e.target && e.target.closest ? e.target.closest("[data-hit]") : null;
+      if (!hit) { state.sel = null; insp.classList.remove("open"); draw(); }
     };
+    // Stop the click a drag would otherwise deliver to the node.
+    svg.addEventListener("click", e => {
+      if (!suppressClick) return;
+      suppressClick = false;
+      e.stopPropagation(); e.preventDefault();
+    }, true);
     svg.addEventListener("pointerup", stop);
     svg.addEventListener("pointercancel", stop);
     svg.addEventListener("wheel", e => {

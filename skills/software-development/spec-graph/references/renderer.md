@@ -50,6 +50,13 @@ that fails offline.
   just pushed the behaviours out of view). Machine edges carry the transition
   **object** in `edge.transition`; code that treats it as an id silently renders
   nothing.
+- **Bind clicks by `data-*` attribute, not by matching row text.** A regex over
+  the row's text also matches ids quoted inside another row's prose, and the
+  click opens the wrong panel.
+- **The click path owns the selection ring.** `draw()` paints the dashed ring
+  from `state.sel`; a handler that opens the panel without assigning it leaves
+  the graph without the highlight the status filter already gives. Set
+  `state.sel` where the panel opens, clear it where the panel closes.
 - **Clamped card text needs a way out.** `.card p` clamps to three lines, so a
   card whose text is clamped must open the inspector — invariants and context
   cards included (`showMeta`, bound by `data-meta`), not only behaviours. A card
@@ -73,6 +80,14 @@ that fails offline.
   narrow frames. Compute the budget from the column width and cut with `…`.
 - **No hand edits.** If a label is wrong, the YAML or the payload is wrong.
 
+- **There is no synthetic-click shortcut.** `setPointerCapture` on the `<svg>`
+  (which pan/zoom needs) retargets the trailing `click` at the `<svg>`, so an
+  `dispatchEvent(new MouseEvent('click'))` probe passes while a real click on a
+  node does nothing. Capture only when the gesture starts on empty canvas, mark
+  every clickable group `data-hit` (`node` / `edge`), suppress the click a drag
+  would deliver, and probe with `Input.dispatchMouseEvent`, never with a
+  constructed event.
+
 ## Theme
 
 The frame injects `--foreground`, `--muted-foreground`, `--accent`, `--border`,
@@ -91,9 +106,20 @@ the cards (full width, page scrolls to it); above it, it is docked as a 320px
 column. Check one selection, one tab switch, and one resize — that is where the
 fit/observer bugs surface.
 
-For a click-path change, drive the real file instead of eyeballing: open the
-rendered HTML over `file://` in the browser and dispatch
-`new MouseEvent('click', {bubbles: true})` on the card — the handlers are
-plain click listeners, no navigation — then assert the `#inspector` DOM
-(`open` class, section count, rule text length). Keep screenshots in the
-loop: clamp, overlay and cue are layout facts a DOM read cannot confirm.
+For a click-path change, drive the real file instead of eyeballing — but drive it
+with **real pointer input**, not `dispatchEvent(new MouseEvent('click'))`. A
+synthetic click skips pointer events entirely, so it passes through a
+`setPointerCapture` that would retarget the real click and leave the node dead:
+that is exactly how the "click does nothing" bug survived a green synthetic
+probe. In the browser tool, send
+`Input.dispatchMouseEvent` (`mousePressed` + `mouseReleased` at the element's
+on-screen centre) and check `elementFromPoint` first — at 780×380 the node you
+aimed at is often below the fold, and the probe then tests nothing.
+
+Then assert the `#inspector` DOM (`open` class, section count, rule text
+length). Keep screenshots in the loop: clamp, overlay and cue are layout facts
+a DOM read cannot confirm. Force the width with a device-metrics override
+(`Emulation.setDeviceMetricsOverride`, e.g. 1000×900 @2x) rather than resizing
+the window, and run the whole probe — navigate, dispatch, assert, capture — in
+one browser call: tab state is not guaranteed between calls, and the next call
+finds `about:blank` where your page was.
