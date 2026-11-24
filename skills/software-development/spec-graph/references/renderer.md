@@ -110,7 +110,12 @@ that fails offline.
 - **The legend is four buckets.** `implemented` (teal without a run, green with
   one), `untested`, `proposed`, `failing`. `draft` and `divergent` keep colours
   but stay out of the legend; adding a fifth row means the summary and the
-  filters have to agree with it.
+  filters have to agree with it. The header counters come from the same
+  `effective()` mapping the paint uses, one chip per bucket present — a count
+  computed by a different rule puts a number in the header that the node
+  colours contradict. Filters key off the painted bucket too: `implemented`
+  includes the unverified, or the filter empties a graph the legend calls
+  populated.
 
 ## Theme
 
@@ -147,3 +152,12 @@ a DOM read cannot confirm. Force the width with a device-metrics override
 the window, and run the whole probe — navigate, dispatch, assert, capture — in
 one browser call: tab state is not guaranteed between calls, and the next call
 finds `about:blank` where your page was.
+
+Palette changes are verified in **both themes**. Outside the desktop frame the
+injected vars do not exist, so simulate each: put a
+`:root{--foreground:…;--muted-foreground:…;--accent:…;--border:…;--card:…}`
+`<style>` before `</head>` — light values once, dark values once — and assert
+the *computed* colour of chips, dots and node strokes, not the stylesheet
+text. Build the fixture spec with one behaviour per status so every bucket is
+on screen at once; a spec that exercises only two buckets ships a palette
+half-tested.

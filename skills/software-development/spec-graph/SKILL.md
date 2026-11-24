@@ -1,7 +1,7 @@
 ---
 name: spec-graph
 description: "Behaviour specs as YAML + reviewable graph, before code."
-version: 1.3.12
+version: 1.3.13
 author: Hermes Agent
 license: MIT
 platforms: [linux, macos, windows]
@@ -92,6 +92,8 @@ Set `SKILL` to the `skill_dir` returned by `skill_view(name='spec-graph')`.
 `spec_render.py` exits 1 when lint fails — the HTML still renders, with a red banner, so the review can continue while errors exist.
 
 **Working on the scripts.** They are stdlib-only on purpose (no PyYAML, no pytest import): exercise them with a bare interpreter — `python spec_lint.py --help` — not only with the repo's venv, or an accidental third-party import goes unnoticed. Never call `subprocess` directly to run a repo command: use `run_command()` from `spec_model.py`, which repairs the executable token on Windows (cmd.exe reads `.venv/Scripts/python.exe` as switches) and decodes child output as bytes. Read `references/renderer.md` before touching `graph.html`.
+
+**Mirror edits into the skills repo.** The profile copy is what runs; the source of truth is the repo the skill is installed from (`~/Documentos/code/hermes-skills`). After a batch of edits, copy every changed file across, prove parity with `diff -rq --exclude='__pycache__'` between the two trees, and commit (the user pushes). An edit left only in the profile is overwritten by the next install.
 
 ## Mode 1 — propose (agent drafts, human reviews)
 
