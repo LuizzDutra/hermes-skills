@@ -624,6 +624,7 @@ def validate(spec: dict, root: Path | None = None, check_refs: bool = True) -> R
 
     flow = data.get("flow")
     step_ids: list[str] = []
+    flow_attached: dict[str, list[str]] = {}
     if flow is not None:
         if machine is not None:
             report.add_error("a spec declares either `machine` or `flow`, not both", "flow")
@@ -643,6 +644,7 @@ def validate(spec: dict, root: Path | None = None, check_refs: bool = True) -> R
                 for nxt in _as_list((step or {}).get("next")):
                     if str(nxt) not in step_ids:
                         report.add_error(f"flow step {step.get('id')} points at unknown next {nxt!r}", "flow.steps")
+            flow_attached = {sid: [] for sid in step_ids}
 
     # -- behaviours ---------------------------------------------------------
     seen_beh: set[str] = set()
@@ -717,10 +719,12 @@ def validate(spec: dict, root: Path | None = None, check_refs: bool = True) -> R
 
         tid = beh.get("transition")
         if tid:
-            if tid not in transitions:
-                report.add_error(f"{bid} links to unknown transition {tid!r}", where)
-            else:
+            if tid in transitions:
                 attached[str(tid)].append(bid)
+            elif str(tid) in step_ids:
+                flow_attached[str(tid)].append(bid)
+            else:
+                report.add_error(f"{bid} links to unknown transition or step {tid!r}", where)
 
         for ref in _as_list(beh.get("refs")):
             if not isinstance(ref, dict):
@@ -739,6 +743,9 @@ def validate(spec: dict, root: Path | None = None, check_refs: bool = True) -> R
                 f"transition {tid} ({src} → {dst}) has no behaviour attached",
                 f"machine.transitions.{tid}",
             )
+    for sid, bids in flow_attached.items():
+        if not bids:
+            report.add_warning(f"flow step {sid} has no behaviour attached", f"flow.steps.{sid}")
 
     # -- conventions / context ---------------------------------------------
     for section in ("conventions", "context"):

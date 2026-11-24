@@ -72,3 +72,10 @@ python spec_render.py <spec> --results results.json --out /tmp/g.html
 Open it at ~760px and ~1100px: the inspector is an overlay below 880px and a
 docked panel above it. Check one selection, one tab switch, and one resize —
 that is where the fit/observer bugs surface.
+
+For a click-path change, drive the real file instead of eyeballing: open the
+rendered HTML over `file://` in the browser and dispatch
+`new MouseEvent('click', {bubbles: true})` on the card — the handlers are
+plain click listeners, no navigation — then assert the `#inspector` DOM
+(`open` class, section count, rule text length). Keep screenshots in the
+loop: clamp, overlay and cue are layout facts a DOM read cannot confirm.

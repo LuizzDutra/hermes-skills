@@ -79,7 +79,8 @@ Rules enforced by `spec_lint.py`:
 - `when` is a string (a list is rejected: one `When` per scenario).
 - `then` is non-empty; a `then` that says "calls X" gets a warning.
 - `status: implemented` without `tests` gets a warning.
-- `transition` must exist; a transition with no behaviour gets a warning.
+- `transition` must name a machine transition (`T-N`) or a flow step (`S-N`);
+  an uncovered transition or step gets a warning.
 
 ## Machine
 
@@ -120,7 +121,8 @@ flow:
 ```
 
 `next` may be a list (branching). Steps can be referenced from
-`behaviour.transition` the same way transitions are.
+`behaviour.transition` the same way transitions are, and a step with no
+behaviour gets the same warning as an uncovered transition.
 
 ## Refactor plans (`kind: refactor`)
 

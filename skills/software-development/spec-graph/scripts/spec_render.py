@@ -504,7 +504,9 @@ TEMPLATE = r"""<!DOCTYPE html>
     `);
   }
   function showState(node, incoming, outgoing) {
-    const behs = [...new Set([...outgoing, ...incoming].flatMap(t => t.behaviours))];
+    const behs = (node.behaviours && node.behaviours.length)
+      ? node.behaviours
+      : [...new Set([...outgoing, ...incoming].flatMap(t => t.behaviours))];
     openInspector(`
       <h2>${node.name}</h2>
       <div class="sub">state · ${node.id}</div>
@@ -582,12 +584,15 @@ TEMPLATE = r"""<!DOCTYPE html>
       return { kind: "machine", nodes, edges, initial: DATA.machine.initial };
     }
     if (DATA.flow) {
-      const nodes = DATA.flow.steps.map(s => ({ id: s.id, name: s.name, description: s.description }));
+      const nodes = DATA.flow.steps.map(s => ({ id: s.id, name: s.name, description: s.description, behaviours: s.behaviours || [] }));
       const edges = [];
-      DATA.flow.steps.forEach(s => (s.next || []).forEach(n => edges.push({
-        id: s.id + "@" + n, tid: s.id, from: s.id, to: n, event: "", guard: "", effect: "",
-        behaviours: s.behaviours || [], refs: [],
-      })));
+      DATA.flow.steps.forEach(s => (s.next || []).forEach(n => {
+        const target = nodes.find(x => x.id === n) || { behaviours: [] };
+        edges.push({
+          id: s.id + "@" + n, tid: s.id, from: s.id, to: n, event: "", guard: "", effect: "",
+          behaviours: [...new Set([...(s.behaviours || []), ...(target.behaviours || [])])], refs: [],
+        });
+      }));
       return { kind: "flow", nodes, edges, initial: DATA.flow.steps[0]?.id };
     }
     return null;
@@ -682,6 +687,7 @@ TEMPLATE = r"""<!DOCTYPE html>
   function nodeHealth(id, m) {
     const node = m.byId ? m.byId[id] : null;
     if (node && node.status) return node.status;
+    if (node && node.behaviours && node.behaviours.length) return worst(node.behaviours);
     const attached = m.edges.filter(e => e.from === id || e.to === id).flatMap(e => e.behaviours);
     return worst([...new Set(attached)]);
   }
@@ -757,7 +763,9 @@ TEMPLATE = r"""<!DOCTYPE html>
     for (const n of m.nodes) {
       const health = nodeHealth(n.id, m);
       const color = PAL[health] || MUTED;
-      const behs = [...new Set(m.edges.filter(e => e.from === n.id || e.to === n.id).flatMap(e => e.behaviours))];
+      const behs = (n.behaviours && n.behaviours.length)
+        ? n.behaviours
+        : [...new Set(m.edges.filter(e => e.from === n.id || e.to === n.id).flatMap(e => e.behaviours))];
       const checkRes = IS_REF ? (n.step?.checkResult || null) : null;
       const dim = IS_REF
         ? (q && !stepMatches(n.step))
