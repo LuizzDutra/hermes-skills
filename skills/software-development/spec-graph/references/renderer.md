@@ -17,7 +17,11 @@ that fails offline.
 
 - **Readable beats complete.** `fit()` clamps zoom to ≥0.72 and left-aligns
   when the graph is wider than the frame; the user pans instead of squinting at
-  7px labels. Do not remove the clamp to make a big machine "fit".
+  7px labels. Do not remove the clamp to make a big machine "fit". The layout
+  spends 190px per depth layer (215 for plans, node `r = 44`), so nothing past
+  ~1260 user units can fit a 960px frame at that clamp: measure
+  `view.getBBox().width * window.__vt.k` against `stage.clientWidth - 48` before
+  saying a graph fits, and shorten the flow instead of shrinking the floor.
 - **The selected node stays visible.** `openInspector()` re-fits and
   `focusNode()` centres the selection inside `usableW()` — the stage width minus
   an overlay inspector. Skip it and the panel covers the node you just clicked.
@@ -135,23 +139,41 @@ the cards (full width, page scrolls to it); above it, it is docked as a 320px
 column. Check one selection, one tab switch, and one resize — that is where the
 fit/observer bugs surface.
 
-For a click-path change, drive the real file instead of eyeballing — but drive it
-with **real pointer input**, not `dispatchEvent(new MouseEvent('click'))`. A
-synthetic click skips pointer events entirely, so it passes through a
-`setPointerCapture` that would retarget the real click and leave the node dead:
-that is exactly how the "click does nothing" bug survived a green synthetic
-probe. In the browser tool, send
+**Assert geometry numerically; a screenshot is not evidence.** Every layout fact
+this file cares about has a number attached, so read the number:
+
+| question | read |
+|---|---|
+| does the graph fit the frame? | `view.getBBox().width * __vt.k` vs `stage.clientWidth - 48` |
+| is the inspector an overlay or in flow? | `getComputedStyle(inspector).position`, its `getBoundingClientRect()` |
+| did the click open the panel? | `#inspector` has class `open`, N sections, rule text length > 0 |
+| is the node on screen? | its `getBoundingClientRect()` inside the viewport |
+| is the colour right? | `getComputedStyle(el).stroke` / `.fill` |
+
+No screenshot, and no vision pass, on a render you just generated: it costs a
+turn and an image read to learn what one `clientWidth` comparison settles, and
+"looks fine" is not a claim a later run can re-check. Vision belongs to images
+the repo produces as output (a chart, a frame of an explainer) — never to
+`graph.html`, whose entire state is the payload plus the stylesheet you already
+have in hand. Clamp, overlay and cue are the only judgement calls, and each one
+reduces to a rect comparison: a clamp is `scrollHeight > clientHeight` on the
+clamping element, an overlay is an `x`/`y` intersection of two rects.
+
+For a click-path change, drive the real file — with **real pointer input**, not
+`dispatchEvent(new MouseEvent('click'))`. A synthetic click skips pointer events
+entirely, so it passes through a `setPointerCapture` that would retarget the real
+click and leave the node dead: that is exactly how the "click does nothing" bug
+survived a green synthetic probe. In the browser tool, send
 `Input.dispatchMouseEvent` (`mousePressed` + `mouseReleased` at the element's
 on-screen centre) and check `elementFromPoint` first — at 780×380 the node you
 aimed at is often below the fold, and the probe then tests nothing.
 
 Then assert the `#inspector` DOM (`open` class, section count, rule text
-length). Keep screenshots in the loop: clamp, overlay and cue are layout facts
-a DOM read cannot confirm. Force the width with a device-metrics override
-(`Emulation.setDeviceMetricsOverride`, e.g. 1000×900 @2x) rather than resizing
-the window, and run the whole probe — navigate, dispatch, assert, capture — in
-one browser call: tab state is not guaranteed between calls, and the next call
-finds `about:blank` where your page was.
+length) and the numbers above, not a picture of them. Force the width with a
+device-metrics override (`Emulation.setDeviceMetricsOverride`, e.g. 1000×900
+@2x) rather than resizing the window, and run the whole probe — navigate,
+dispatch, assert — in one browser call: tab state is not guaranteed between
+calls, and the next call finds `about:blank` where your page was.
 
 Palette changes are verified in **both themes**. Outside the desktop frame the
 injected vars do not exist, so simulate each: put a

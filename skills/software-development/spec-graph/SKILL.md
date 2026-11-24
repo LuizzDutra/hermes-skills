@@ -31,6 +31,7 @@ propose ──▶ render ──▶ human review ──▶ implement (TDD, one be
 - Adopting the skill in a repo that already has tests: bootstrap the links with `spec_link.py` (see `references/workflows.md`).
 - A **refactor** with a checkable structural target and more than a couple of steps (`kind: refactor`, Mode 6).
 - The user says "spec this", "what should it do first", "show me the behaviour", "implement this spec".
+- The user asks for a **demo or mock graph** that exercises every status bucket at once — build a fixture spec and back it with a real test run, never hand-painted colours (see Review surface).
 
 **Not for:** typos, formatting, dependency bumps, a one-step refactor, or a refactor whose goal cannot be expressed as a command ("clean up X"). Open-ended exploration goes to `spike` first, then comes back with what it learned.
 
@@ -245,6 +246,7 @@ Do **not** track progress by editing the graph or by flipping colours: status li
 - **≤ 15 behaviours per spec.** More means two capabilities — split them.
 - **No new dependency in the repo** for this (no Cucumber, no pydantic). The scripts are stdlib-only by design.
 - The graph is generated only from the validated YAML. Never hand-edit `graph.html`.
+- **A render is verified by measurement, not by vision.** `graph.html` is a payload, a stylesheet and a layout you can read: assert the fit, the panel rect, the `open` class and the computed colour. No screenshot pass on a render you just generated — it burns a turn and settles less than one rect comparison.
 
 ## Review surface
 
@@ -256,12 +258,16 @@ The HTML is self-contained (no CDN) and adapts to the frame:
 - **Trace** — behaviours → tests → cited files, orphans highlighted.
 - **Table** — plain reading view for review.
 - **Plan / Steps / Checks** — for `kind: refactor`: steps as a dependency graph, step cards with the attached check, and the last check run.
-- **Status colours** — `implemented` is one label with two colours: teal while no test run backs it up, green only after `spec_verify.py` wrote `results.json`. Never read teal as done, and never "fix" it by editing the colour. `approved` in the YAML is painted as **untested** (agreed and not built carries no separate state), and `proposed` has its own colour (`#aa91ee` on a dark frame, `#7a5cf0` on a light one), distinct from the amber untested.
+- **Status colours** — `implemented` is one label with two colours: teal while no test run backs it up, green only after `spec_verify.py` wrote `results.json`. Never read teal as done, and never "fix" it by editing the colour. `approved` in the YAML is painted as **untested** (agreed and not built carries no separate state), and `proposed` has its own colour (`#aa91ee` on a dark frame, `#7a5cf0` on a light one), distinct from the amber untested. Teal exists **only** in a render without `results.json`: once a run exists, an `implemented` behaviour that declares no tests is painted green (its result is empty, not `missing`), so the amber bucket comes from `approved` alone. A demo graph that must show green *and* red needs a real run; one that must also show teal gets a second render with `--out graph-norun.html` instead of a deleted `results.json`.
 - **Inspector** — rule, scenarios, tests with pass/fail, refs with `open` actions, and an **Ask to change this behaviour** button that sends a prompt back into the chat. Each scenario block inside the behaviour opens `showScenario` (id, `given`, `when`, `then` one item per line, and a link back to the behaviour); invariant and context cards open the same panel through `showMeta`. Anything that clamps in a card or in the graph label must be readable in the inspector — a truncated rule with no destination is a dead end.
 
 Use the frame: one `::preview{file="..."}` line, no prose dump of the whole spec. Point at the 2-3 behaviours that need a decision. When the user asks to open a graph by name, re-render it first — the file on disk may predate the last edit to the YAML.
 
 **Click paths need real pointer input.** A `dispatchEvent(new MouseEvent('click'))` probe never goes through `setPointerCapture`, which the pan gesture installs — so it can pass while a real click on a node opens nothing. Probe with `Input.dispatchMouseEvent` (press + release at the element's screen centre), and re-render before showing the graph: a stale `graph.html` looks like a broken click.
+
+**Measure the surface, never look at it.** A render you just generated is checked with numbers, not with eyes: node bbox × `__vt.k` against the stage width for the fit, `getBoundingClientRect()` for the inspector, `#inspector.open` plus its section count for a click that worked, computed `stroke`/`fill` for a colour. Do not screenshot `graph.html` and do not spend a vision pass on it — the file's state is the payload plus a stylesheet you already have, and "looks right" is not something a later run can re-check. Vision is for images the repo produces as output, never for the review surface itself. The table of what to read is in `references/renderer.md`.
+
+**A graph the frame can hold.** Author the graph to the frame, not the reverse. The layout spends 190px per depth layer and `fit()` never scales below `k = 0.72`, so past ~1260 user units the last column is clipped at 960px — colours and all. Keep a flow or machine at ≤5 depth layers (a 9-step pipeline with branches fits; a 10-step chain does not), and give **every** step an incoming `next:` link: a step nothing points at lands in the last column and widens the whole graph. Model a retry loop as a step that exits to quarantine, not as a back-edge the layering cannot fold. Check the fit by measurement at a 960px viewport (`view.getBBox().width * window.__vt.k` against `stage.clientWidth - 48`) rather than by looking at a screenshot, and restructure the spec when it overflows instead of lowering the clamp.
 
 ## Red flags
 
@@ -277,6 +283,7 @@ Use the frame: one `::preview{file="..."}` line, no prose dump of the whole spec
 | "Implemented" with no tests | It is `untested`; the claim needs a run and a linked test |
 | Everything green before any test ran | Without `results.json` every claim is teal/unverified; green is earned by a run |
 | Editing a shipped spec for unreleased behaviour | Use a delta spec |
+| A screenshot taken to check `graph.html` | One `clientWidth`/`getBBox()` comparison answers it; vision is for images the repo produced, not for your own render |
 
 ## Verification checklist
 
