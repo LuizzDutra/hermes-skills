@@ -1,7 +1,7 @@
 ---
 name: spec-graph
 description: "Behaviour specs as YAML + reviewable graph, before code."
-version: 1.3.5
+version: 1.3.6
 author: Hermes Agent
 license: MIT
 platforms: [linux, macos, windows]
@@ -254,7 +254,7 @@ The HTML is self-contained (no CDN) and adapts to the frame:
 - **Table** — plain reading view for review.
 - **Plan / Steps / Checks** — for `kind: refactor`: steps as a dependency graph, step cards with the attached check, and the last check run.
 - **Unverified vs passing** — teal = `implemented` with no test run behind it; green appears only after `spec_verify.py` wrote `results.json`. Never read teal as done, and never "fix" it by editing the colour.
-- **Inspector** — rule, scenarios, tests with pass/fail, refs with `open` actions, and an **Ask to change this behaviour** button that sends a prompt back into the chat.
+- **Inspector** — rule, scenarios, tests with pass/fail, refs with `open` actions, and an **Ask to change this behaviour** button that sends a prompt back into the chat. Invariant and context cards open the same panel (`showMeta`): their text is clamped to three lines in the grid, so the inspector is where the whole rule is readable.
 
 Use the frame: one `::preview{file="..."}` line, no prose dump of the whole spec. Point at the 2-3 behaviours that need a decision. When the user asks to open a graph by name, re-render it first — the file on disk may predate the last edit to the YAML.
 

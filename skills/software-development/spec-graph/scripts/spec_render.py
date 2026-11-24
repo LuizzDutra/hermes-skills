@@ -477,6 +477,32 @@ TEMPLATE = r"""<!DOCTYPE html>
       <div class="acts"><button class="btn" ${send(`Change ${b.id} (${b.title}) in ${DATA.source}. Ask me what I want different, then show the spec diff before touching code.`)}>Ask to change this behaviour</button></div>
     `, tr ? tr.from[0] : "");
   }
+  function metaEntry(id) {
+    const conv = (DATA.conventions || []).find(c => c.id === id);
+    if (conv) return { id, kind: "invariant", text: conv.rule, refs: conv.refs || [], tests: [], scope: "" };
+    const ctx = (DATA.context || []).find(c => c.id === id);
+    if (ctx) return { id, kind: "context", text: ctx.note, refs: ctx.refs || [], tests: [], scope: "" };
+    const pinv = (DATA.invariants || []).find(c => c.id === id);
+    if (pinv) return { id, kind: "invariant", text: pinv.rule, refs: pinv.refs || [], tests: pinv.tests || [], scope: "refactor plan" };
+    return null;
+  }
+  // Invariant and context cards clamp their text to three lines; the inspector is
+  // the only place the whole rule is readable, so it must open for them too.
+  function showMeta(id) {
+    const m = metaEntry(id); if (!m) return;
+    state.sel = null;
+    const tests = m.tests.length
+      ? m.tests.map(t => `<div class="ref"><span>${esc(t)}</span></div>`).join("")
+      : `<div class="tip">no test linked</div>`;
+    openInspector(`
+      <h2>${m.kind === "context" ? "Context" : "Invariant"}</h2>
+      <div class="sub">${m.id}${m.scope ? " · " + m.scope : ""}</div>
+      <p class="rule">${esc(m.text)}</p>
+      <div class="sec"><h3>Repo references</h3>${refRows(m.refs)}</div>
+      ${m.tests.length ? `<div class="sec"><h3>Tests that would catch a regression</h3>${tests}</div>` : ""}
+      <div class="acts"><button class="btn" ${send(`Change ${m.id} (${m.kind}) in ${DATA.source}. Ask me what I want different, then show the spec diff before touching code.`)}>Ask to change this ${m.kind}</button></div>
+    `);
+  }
   function showState(node, incoming, outgoing) {
     const behs = [...new Set([...outgoing, ...incoming].flatMap(t => t.behaviours))];
     openInspector(`
@@ -880,6 +906,7 @@ TEMPLATE = r"""<!DOCTYPE html>
   }
 
   // ---- behaviours --------------------------------------------------------
+  const OPEN_CUE = `<span style="margin-left:auto;color:var(--acc)">open ›</span>`;
   function renderCards() {
     const groups = {};
     DATA.behaviours.forEach(b => { const e = effective(b); (groups[e] = groups[e] || []).push(b); });
@@ -903,14 +930,14 @@ TEMPLATE = r"""<!DOCTYPE html>
         <span style="font-size:11px;color:${MUTED}">${groups[k].length}</span></div>${cards}`;
     }).join("");
     const metaCards = [
-      ...(DATA.conventions || []).map(c => `<div class="card" style="cursor:default">
+      ...(DATA.conventions || []).map(c => `<div class="card" data-meta="${c.id}" title="open the full text">
           <div class="top"><span class="id">${c.id}</span><span class="id">invariant</span></div>
           <p>${esc(c.rule)}</p>
-          <div class="foot"><span>${c.refs.length} ref${c.refs.length === 1 ? "" : "s"}</span></div></div>`),
-      ...(DATA.context || []).map(c => `<div class="card" style="cursor:default">
+          <div class="foot"><span>${c.refs.length} ref${c.refs.length === 1 ? "" : "s"}</span>${OPEN_CUE}</div></div>`),
+      ...(DATA.context || []).map(c => `<div class="card" data-meta="${c.id}" title="open the full text">
           <div class="top"><span class="id">${c.id}</span><span class="id">context</span></div>
           <p>${esc(c.note)}</p>
-          <div class="foot"><span>${c.refs.length} ref${c.refs.length === 1 ? "" : "s"}</span></div></div>`),
+          <div class="foot"><span>${c.refs.length} ref${c.refs.length === 1 ? "" : "s"}</span>${OPEN_CUE}</div></div>`),
     ].join("");
     const meta = metaCards
       ? `<div style="grid-column:1/-1;display:flex;align-items:center;gap:8px;margin:6px 0 2px">
@@ -920,6 +947,7 @@ TEMPLATE = r"""<!DOCTYPE html>
     const box = $("#body-beh");
     box.innerHTML = `<div class="cards">${meta}${html || '<div class="empty">no behaviours match</div>'}</div>`;
     $$("[data-beh]", box).forEach(card => card.addEventListener("click", () => showBehaviour(card.dataset.beh)));
+    $$("[data-meta]", box).forEach(card => card.addEventListener("click", () => showMeta(card.dataset.meta)));
   }
 
   // ---- trace -------------------------------------------------------------
@@ -1060,11 +1088,11 @@ TEMPLATE = r"""<!DOCTYPE html>
       ? `<div style="grid-column:1/-1;display:flex;align-items:center;gap:8px;margin:6px 0 2px">
            <span style="font-size:11px;letter-spacing:.07em;text-transform:uppercase;color:${MUTED}">invariants</span>
            <span style="font-size:11px;color:${MUTED}">${DATA.invariants.length}</span></div>` +
-        DATA.invariants.map(i => `<div class="card" style="cursor:default">
+        DATA.invariants.map(i => `<div class="card" data-meta="${i.id}" title="open the full text">
             <div class="top"><span class="id">${i.id}</span></div>
             <p>${esc(i.rule)}</p>
             <div class="foot"><span>${i.refs.length} ref${i.refs.length === 1 ? "" : "s"}</span>
-              ${i.tests.length ? `<span>${i.tests.length} test${i.tests.length === 1 ? "" : "s"}</span>` : ""}</div></div>`).join("")
+              ${i.tests.length ? `<span>${i.tests.length} test${i.tests.length === 1 ? "" : "s"}</span>` : ""}${OPEN_CUE}</div></div>`).join("")
       : "";
     const steps = order.filter(k => groups[k]).map(k => {
       const cards = groups[k].map(s => {
@@ -1085,6 +1113,7 @@ TEMPLATE = r"""<!DOCTYPE html>
     const box = $("#body-beh");
     box.innerHTML = `<div class="cards">${inv}${steps || '<div class="empty">no steps match</div>'}</div>`;
     $$("[data-step]", box).forEach(card => card.addEventListener("click", () => showStep(card.dataset.step)));
+    $$("[data-meta]", box).forEach(card => card.addEventListener("click", () => showMeta(card.dataset.meta)));
   }
 
   function renderChecks() {

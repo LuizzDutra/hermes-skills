@@ -10,7 +10,7 @@ that fails offline.
 | payload | `build_payload()` in `spec_model.py` | the only data the page knows |
 | layout | `layout()` | depth by BFS from `roots`, one barycenter pass |
 | drawing | `draw()` | SVG only, no canvas, no library |
-| inspector | `showBehaviour` / `showState` / `showTransition` / `showStep` | rebuilt on each selection |
+| inspector | `showBehaviour` / `showState` / `showTransition` / `showStep` / `showMeta` | rebuilt on each selection |
 
 ## Rules that are easy to break
 
@@ -42,6 +42,10 @@ that fails offline.
 - **Long node titles wrap, they do not vanish.** Four lines with an ellipsis
   plus a `<title>` tooltip for plan steps; three lines for states. Truncating
   silently loses the thing the reviewer needs.
+- **Clamped card text needs a way out.** `.card p` clamps to three lines, so a
+  card whose text is clamped must open the inspector — invariants and context
+  cards included (`showMeta`, bound by `data-meta`), not only behaviours. A card
+  that looks clickable and is not strands the half of the rule that got cut.
 - **Measure the container after it is displayed.** `renderTrace()` sizes its
   columns from `box.clientWidth`; a flex child with auto width measures 0 before
   it has content, so the canvas silently falls back to a 700px viewBox and every
