@@ -1,7 +1,7 @@
 ---
 name: spec-graph
 description: "Behaviour specs as YAML + reviewable graph, before code."
-version: 1.3.2
+version: 1.3.5
 author: Hermes Agent
 license: MIT
 platforms: [linux, macos, windows]
@@ -195,12 +195,32 @@ steps:
 Rules:
 
 - `goal` names a property a **command can check**. "Clean up billing" is not a goal; "no module in `domain/` imports `infra/`" is.
-- `checks` are shell commands where **exit 0 means the property holds**. For grep-style checks that pass when nothing matches, set `expect_exit: 1`.
+checks are shell commands where **exit 0 means the property holds**. For grep-style checks that pass when nothing matches, set `expect_exit: 1`. Quote patterns as fixed strings (`grep -qF`) — inside a YAML scalar, regex metacharacters plus shell quoting is a triple negotiation. When the `run:` scalar must stay double-quoted YAML (it contains single quotes), write regex escapes doubled (`rbac\\.authorization` renders as `rbac\.authorization`) and inner shell quotes as `\"`; echo the scalar through a shell once before trusting a fresh check to run as written.
+
+**Upgrading placeholder checks at completion.** A step that is still `todo` often carries a cheap placeholder check (`test -d infra/k8s`) — correct, because a pending-work check must fail today. When the step lands, replace that check with a regression-grade one before flipping `status: done`: minimum file/object counts, line caps on the slimmed-down entrypoint, a byte-diff of the entrypoint's observable output against a golden captured before the move, and grep negatives proving the moved content no longer lives in Python. A directory-existence check passes again the moment someone deletes the refactor; a real one fails the graph when the refactor is undone. A step that *removes* content needs the mirror operation: re-anchor every count check at the new exact number before flipping `status: done` — a stale count fails after a legitimate removal and gets loosened into decoration. When the exact number matters, enforce it in a repo invariant test and keep the grep check broad.
 - `invariants` are what must still be true afterwards (public API, error types, the suite). They carry refs, and optionally the tests that would catch a regression.
 - `steps` form a DAG via `depends_on`; `status` is `todo | doing | done | blocked`.
 - **A step marked `done` whose check fails is a lie**, and the graph paints it red. Same rule as behaviours: evidence, not claims.
 
 Loop: `spec_lint.py` → `spec_checks.py --render` → preview → update a status → re-run. The linter rejects dependency cycles, unknown check ids, and `touches` paths that do not exist.
+
+**Consolidating checks when a boundary gains a suite.** A step's arrival often hands the plan a stronger check that subsumes several old ones — the rule migrates into a repo test file that reads imports by AST, and the old per-step checks become dead weight: a `test -f` milestone passes on an empty file, and a textual grep cannot see `from app import adapters` because the token `app.adapters` never appears in that shape. When that happens, delete the subsumed checks, repoint every step that cited them at the surviving one, retitle it for the whole boundary it now guards, and restate the affected `INV-N` at the stronger rule — a retired id left in a `check:` line is a lint failure. Prove the new suite bites by probing each evasion shape (aliased import, direct module import, allowlisted symbol) against a temp tree before trusting it; patch **every** module-level `Path` constant the probe's failure path touches, not just the directory under test — a helper that formats results with `path.relative_to(APP)` throws a path error before the assertion fires.
+
+Several edits to one plan file (repoint steps, retire checks, append a step, rewrite a header) go through one scripted pass that asserts each replacement landed — not one tool call per line.
+
+**Amending mid-flight.** A user-approved scope change becomes **new steps**, not edits to shipped ones: each new `todo` step carries exactly one new check, the new property gets its own `INV-N`, and any downstream step that documents the end state (docs, summaries) gains the new steps in `depends_on` so it cannot close first. Run each new check **before** its step exists: a pending-work check must fail today — one that already passes is decoration, not a marker. State the out-of-scope boundary in the step's `note` ("the adapter for the next storage backend does not enter this plan") so the step cannot grow once implementation starts.
+
+**Delegating a big step.** A step too large for one turn splits across two subagents, with the gate kept by the parent:
+
+1. A **planning subagent** (read-only) writes a step plan to `.specs/<cap>/s<N>-plan.md`, measures a real baseline itself (collected counts, durations, coverage), classifies by content — not by file name — and closes with numbered Open Questions. Tell it `plan.yaml` is untouchable and that every number it reports must come from a command it actually ran.
+2. The owner validates, then an **execution subagent** commits one sub-step at a time, each green (repo's own gate before the commit) and staged by explicit path only.
+3. **Only the parent flips `status: done`**, after re-running the check itself — a child's self-report is not evidence. Re-derive the child's headline numbers from the repo itself (collected test count, the gate command's tail, coverage from the report file) before quoting them to the user. When your re-derivation disagrees with the child's number, write the **measured** value into the step's `note` and say which number moved — the child's figure is a claim, the report file on disk is the fact; never leave the prettier of the two in the plan. Re-run `spec_checks.py --render` after the flip.
+
+**A check run races a worker mid-edit.** While an execution subagent is mid-step on the same tree, run only `spec_lint.py` (a pure read of the plan) and defer `spec_checks.py --render` until the child's commits land: checks execute shell commands against the live working tree, so a mid-edit run can fail spuriously or pass on a half-state. Scope-verify the child's commit by the commit itself (`git show --stat <sha>`), never by a range from an earlier point — a range sweeps in sibling commits' files and false-flags scope violations.
+
+**Proving a no-behaviour-change step.** "No behaviour change" is verified from the diff, not from the green suite: `git diff <base>..HEAD -- <test root>` must contain zero changed `assert` lines, generated contract artifacts (OpenAPI JSON, goldens) must be byte-identical, and every hunk on the hot path must show imports swapped with call arguments preserved — a suite can stay green while a call site silently loses an argument. Read the hunks, not the summary: the diff of a few-line hot path fits on a screen and settles the question.
+
+Before moving files any `check:` or invariant cites, grep the plan and the rendered HTML for those paths: checks cite exact paths, so a move silently breaks a check that a fresh run would only expose later. When the move is of tests, prove nothing was lost by diffing collected test ids normalized by basename (`--collect-only -q | grep :: | sed 's|.*/||' | sort`) before and after. Count path arithmetic too: grep the moving tests for `parents[` and `Path(__file__)` — a move that adds a directory level breaks relative-depth reads before it breaks imports, and a plan that only predicted import breakage underestimates the blast radius.
 
 **Finishing.** Fold the outcome into the capability's spec as a new `INV-N`
 (refs to the new structure) and bump that spec's `version`; then move it to

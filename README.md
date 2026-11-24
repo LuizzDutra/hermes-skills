@@ -5,6 +5,9 @@ Agent skills I use with [Hermes Agent](https://hermes-agent.nousresearch.com/doc
 | Skill | What it does |
 |---|---|
 | [`spec-graph`](skills/software-development/spec-graph) | Behaviour specs as validated YAML plus an interactive graph; refactor plans with structural checks. |
+| [`comment-hygiene`](skills/comment-hygiene) | Comments and docstrings that describe the code in front of the reader, not the plan that produced it. |
+| [`commit`](skills/software-development/commit) | One well-formed commit per logical change: Conventional Commits, pt-BR body, secret check first. |
+| [`subagent-driven-development`](skills/software-development/subagent-driven-development) | Execute an approved plan in rounds of delegated subagents, with the parent keeping the gate. |
 | [`explainer-video`](skills/creative/explainer-video) | Script to narrated motion graphics with Pillow and ffmpeg. |
 
 ## Install
@@ -17,7 +20,7 @@ cp -r skills/* ~/.hermes/skills/
 ```
 
 Each skill is self-contained: `SKILL.md` plus `references/`, `templates/` and,
-where relevant, `scripts/`. The two skills here share no code.
+where relevant, `scripts/`. The skills here share no code.
 
 ## spec-graph
 
@@ -40,6 +43,34 @@ made from chat prose.
 The gate is `python scripts/spec_lint.py <spec>`; `spec_render.py` builds the
 graph, `spec_verify.py` maps JUnit results back onto behaviours, and
 `spec_checks.py` runs a refactor plan's structural checks.
+
+## comment-hygiene
+
+A comment describes the code in front of the reader — not the conversation that
+produced it, the plan that ordered it, or the version timeline. The skill lists
+what never belongs in a comment or docstring (addressing the requester, plan and
+step ids, changelog narration) and what does (the why, the invariant, the risk
+avoided, legacy tolerance), plus the rule that a contract docstring is published
+text. `scripts/comment_scan.py --staged` reads only the added lines, so legacy
+hits in the tree never surface.
+
+## commit
+
+Turns the current changes into one or more well-formed commits: `git status
+--short` first (a plain diff hides untracked files), a secret check by basename
+before staging, the comment scan on new Python lines, then the convention the
+history actually uses. Message is Conventional Commits, with description and body
+in pt-BR and the body explaining why.
+
+## subagent-driven-development
+
+Executes a written plan in rounds of delegated subagents. A round is the set of
+phases whose file sets are disjoint; the parent keeps every gate — pre-flight
+baseline, verification between rounds, the commits and the end-to-end run.
+Children get the plan's path plus a phase heading instead of a retyped copy, their
+self-reported numbers are re-measured, and a child that "completes" by deleting a
+failing test is caught by the assert-count diff. `templates/phase-brief.md` is the
+per-phase brief.
 
 ## explainer-video
 
