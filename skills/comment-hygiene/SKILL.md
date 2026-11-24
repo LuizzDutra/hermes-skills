@@ -1,7 +1,7 @@
 ---
 name: comment-hygiene
 description: "Use when writing or cleaning comments and docstrings."
-version: 2.0.0
+version: 2.1.0
 author: Hermes Agent
 license: MIT
 metadata:
@@ -36,6 +36,10 @@ comentário: é recado.
 4. **Repetir o código.** Se o nome ou o tipo carregam o sentido, mude o nome em vez
    de comentar.
 5. **Changelog em docstring de módulo.** Módulo: o que é e por que existe agora.
+6. **Exemplo literal de padrão.** Ao documentar um formato (id de plano, hash,
+   ticket), escreva a forma genérica — `P<n>`, `(<sha>)` — e não um token real:
+   um exemplo literal é indistinguível do slop que a regra proíbe, e a linha
+   falha na própria varredura do diff.
 
 ## Sempre
 
