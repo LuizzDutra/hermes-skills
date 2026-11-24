@@ -538,23 +538,32 @@ TEMPLATE = r"""<!DOCTYPE html>
     `);
   }
   function showState(node, incoming, outgoing) {
+    state.sel = node.id;  // draw() paints the selection ring from this
+    // Callers pass transition objects (machine edges); accept ids too, so the
+    // panel keeps working if a graph model ever stores the id.
+    const trOf = x => (typeof x === "string" ? trById[x] : x);
     const behs = (node.behaviours && node.behaviours.length)
       ? node.behaviours
-      : [...new Set([...outgoing, ...incoming].flatMap(t => t.behaviours))];
+      : [...new Set([...outgoing, ...incoming].flatMap(x => (trOf(x) || {}).behaviours || []))];
+    const edgeRows = (list, dir) => list.map(x => {
+      const t = trOf(x); if (!t) return "";
+      const where = dir === "out" ? `→ ${t.to}` : `from ${(t.from || []).join(", ")}`;
+      return `<div class="ref"><span>${esc(t.event || t.id)} ${esc(where)}</span>
+        <span style="margin-left:auto;color:${PAL[worst(t.behaviours || [])]}">${t.id}</span></div>`;
+    }).join("");
+    const behRows = behs.map(id => `<div class="ref" data-beh="${id}" style="cursor:pointer">
+        <span class="tdot" style="background:${PAL[effOf(id)]}"></span>
+        <span>${id} ${esc((behById[id] || {}).title || "")}</span><button>open ›</button></div>`).join("");
     openInspector(`
-      <h2>${node.name}</h2>
-      <div class="sub">state · ${node.id}</div>
-      ${node.description ? `<p class="rule">${node.description}</p>` : ""}
-      <div class="sec"><h3>Outgoing (${outgoing.length})</h3>
-        ${outgoing.map(t => `<div class="ref">${t.event} → ${t.to}<span style="color:${PAL[worst(t.behaviours)]}">${t.id}</span></div>`).join("") || `<div class="tip">none</div>`}</div>
-      <div class="sec"><h3>Incoming (${incoming.length})</h3>
-        ${incoming.map(t => `<div class="ref">${t.event} from ${t.from.join(", ")}<span style="color:${PAL[worst(t.behaviours)]}">${t.id}</span></div>`).join("") || `<div class="tip">none</div>`}</div>
+      <h2>${esc(node.name)}</h2>
+      <div class="sub">${IS_REF ? "step" : "state"} · ${node.id}</div>
+      ${node.description ? `<p class="rule">${esc(node.description)}</p>` : ""}
       <div class="sec"><h3>Behaviours (${behs.length})</h3>
-        ${behs.map(id => `<div class="ref"><span class="tdot" style="background:${PAL[effOf(id)]}"></span><span>${id} ${behById[id]?.title || ""}</span></div>`).join("") || `<div class="tip">none attached</div>`}</div>
+        ${behRows || `<div class="tip">no behaviour attached to this ${IS_REF ? "step" : "node"}</div>`}</div>
+      ${outgoing.length ? `<div class="sec"><h3>Outgoing (${outgoing.length})</h3>${edgeRows(outgoing, "out")}</div>` : ""}
+      ${incoming.length ? `<div class="sec"><h3>Incoming (${incoming.length})</h3>${edgeRows(incoming, "in")}</div>` : ""}
     `, node.id);
-    $$(".ref", insp).forEach(row => row.addEventListener("click", () => {
-      const m = row.textContent.match(/BEH-\d{3}/); if (m) showBehaviour(m[0]);
-    }));
+    $$("[data-beh]", insp).forEach(row => row.addEventListener("click", () => showBehaviour(row.dataset.beh)));
   }
   function showTransition(t) {
     const behs = t.behaviours;

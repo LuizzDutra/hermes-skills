@@ -1,7 +1,7 @@
 ---
 name: spec-graph
 description: "Behaviour specs as YAML + reviewable graph, before code."
-version: 1.3.9
+version: 1.3.10
 author: Hermes Agent
 license: MIT
 platforms: [linux, macos, windows]
@@ -248,7 +248,7 @@ Do **not** track progress by editing the graph or by flipping colours: status li
 
 The HTML is self-contained (no CDN) and adapts to the frame:
 
-- **Graph** — states as nodes, events as labelled edges; edge colour = worst attached behaviour; dashed = transition with no behaviour; click a node/edge for guard, effect, behaviours, refs.
+- **Graph** — states as nodes, events as labelled edges; edge colour = worst attached behaviour; dashed = transition with no behaviour; clicking a node lists the **behaviours attached to it first** (each row opens the behaviour panel), then the transitions in and out; clicking an edge shows guard, effect, behaviours and refs. The status filter (or the search box) dims every node whose behaviours do not match, so typing `BEH-010` points at the step that owns it.
 - **Behaviours** — invariants and context first, then behaviour cards grouped by status.
 - **Scenarios** — every scenario as a row (`id`, behaviour, `when`, given/then counts); a row opens the full `given`/`when`/`then` with the behaviour it belongs to. Hidden on a refactor plan.
 - **Trace** — behaviours → tests → cited files, orphans highlighted.

@@ -43,10 +43,26 @@ that fails offline.
 - **Long node titles wrap, they do not vanish.** Four lines with an ellipsis
   plus a `<title>` tooltip for plan steps; three lines for states. Truncating
   silently loses the thing the reviewer needs.
+- **The node panel leads with behaviours.** A node is clicked to answer "which
+  rules live here", so `showState` renders `Behaviours (N)` first, each row a
+  `data-beh` link into `showBehaviour`, and only then the transitions in/out —
+  and those only when non-empty (a `flow` step has none; the old "none" rows
+  just pushed the behaviours out of view). Machine edges carry the transition
+  **object** in `edge.transition`; code that treats it as an id silently renders
+  nothing.
 - **Clamped card text needs a way out.** `.card p` clamps to three lines, so a
   card whose text is clamped must open the inspector — invariants and context
   cards included (`showMeta`, bound by `data-meta`), not only behaviours. A card
   that looks clickable and is not strands the half of the rule that got cut.
+- **Multi-item values render one `<li>` per item.** Joining a list into one
+  string with `; ` turns a three-item scenario into a paragraph no reviewer
+  reads. `given`, `then`, refs and steps are separate items in the inspector,
+  never a concatenated string.
+- **A new inspector panel copies `showScenario` whole**: header `id · owner`,
+  a link back to the owning entity, hidden for `kind: refactor`, closed by
+  `setTab` and Escape. And wire the click in every surface that shows the
+  entity — card, table row and graph node all reach the same panel; the
+  surface without the click is the one the user reports as missing.
 - **Measure the container after it is displayed.** `renderTrace()` sizes its
   columns from `box.clientWidth`; a flex child with auto width measures 0 before
   it has content, so the canvas silently falls back to a 700px viewBox and every
