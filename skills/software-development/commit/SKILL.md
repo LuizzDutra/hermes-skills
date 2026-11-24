@@ -1,7 +1,7 @@
 ---
 name: commit
 description: "Use when committing: Conventional Commits, pt-BR body."
-version: 1.1.0
+version: 1.2.0
 author: LuizzDutra (ported from the OpenCode config skill of the same name)
 license: MIT
 platforms: [linux, macos, windows]
@@ -55,7 +55,11 @@ Nothing lands until the message and the file list are agreed.
    prefix) instead of this spec.
 6. Classify the change, propose the message, and commit after approval. If
    the user said "commit" and the change is unambiguous, skip the approval
-   step for the message only — never for the secret check.
+   step for the message only — never for the secret check. In a fresh clone,
+   check `git config user.email` before the first commit — an unset identity
+   fails the commit after everything is staged. If unset, set
+   `user.name`/`user.email` repo-local (no `--global`), copying both from the
+   repo's own history (`git log -1 --format='%an <%ae>'`).
 
 ## Message format
 
