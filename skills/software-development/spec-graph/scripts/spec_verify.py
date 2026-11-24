@@ -39,7 +39,10 @@ def junit_tests(path: Path) -> list[dict]:
     for case in root.iter("testcase"):
         classname = case.get("classname") or ""
         name = case.get("name") or ""
-        failed = case.find("failure") is not None or case.find("error") is not None
+        failure = case.find("failure")
+        error = case.find("error")
+        bad = failure if failure is not None else error
+        failed = bad is not None
         skipped = case.find("skipped") is not None
         cases.append(
             {
@@ -48,8 +51,7 @@ def junit_tests(path: Path) -> list[dict]:
                 "ok": not failed and not skipped,
                 "skipped": skipped,
                 "time": float(case.get("time") or 0),
-                "message": ((case.find("failure") if case.find("failure") is not None else case.find("error")) or {})
-                .get("message", "") if failed else "",
+                "message": (bad.get("message", "") if bad is not None else "") if failed else "",
             }
         )
     return cases
