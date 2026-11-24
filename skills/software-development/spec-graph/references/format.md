@@ -217,6 +217,12 @@ pass/fail and the graph paints the difference. `divergent` is for the case where
 the spec was approved and the code does something else — decide with the user
 whether the spec or the code is wrong.
 
+The graph paints four buckets, not six: `implemented` (teal without a test run,
+green with one), `untested`, `proposed` and `failing`. `approved` folds into
+`untested` — agreed and not built is untested, and a separate bucket told the
+reviewer nothing — while `draft` and `divergent` keep their own colours but are
+not in the legend.
+
 ## References
 
 ```yaml

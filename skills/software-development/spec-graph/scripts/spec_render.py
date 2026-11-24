@@ -279,13 +279,13 @@ TEMPLATE = r"""<!DOCTYPE html>
   const DARK = luminance(FG) > 0.5;
   const PAL = DARK
     ? { implemented: "#3fb950", unverified: "#2dd4bf", fail: "#f85149", divergent: "#f85149", missing: "#d29922",
-        approved: "#4493f8", proposed: "#d29922", draft: "#8b949e", none: "#8b949e", added: "#3fb950", changed: "#d29922" }
+        approved: "#4493f8", proposed: "#aa91ee", draft: "#8b949e", none: "#8b949e", added: "#3fb950", changed: "#d29922" }
     : { implemented: "#1a7f37", unverified: "#0f766e", fail: "#cf222e", divergent: "#cf222e", missing: "#9a6700",
-        approved: "#0969da", proposed: "#9a6700", draft: "#6e7781", none: "#6e7781", added: "#1a7f37", changed: "#9a6700" };
-  const ORDER = ["fail", "divergent", "missing", "proposed", "draft", "approved", "unverified", "implemented"];
-  const RANK = { fail: 9, divergent: 9, missing: 8, proposed: 7, draft: 6, approved: 5, unverified: 4, implemented: 3, none: 1 };
+        approved: "#0969da", proposed: "#7a5cf0", draft: "#6e7781", none: "#6e7781", added: "#1a7f37", changed: "#9a6700" };
+  const ORDER = ["fail", "divergent", "missing", "proposed", "draft", "unverified", "implemented"];
+  const RANK = { fail: 9, divergent: 9, missing: 8, proposed: 7, draft: 6, unverified: 4, implemented: 3, none: 1 };
   const RANK_LABEL = { fail: "failing", divergent: "divergent", missing: "untested", proposed: "proposed",
-                       draft: "draft", approved: "approved", unverified: "implemented, unverified", implemented: "implemented" };
+                       draft: "draft", unverified: "implemented", implemented: "implemented" };
 
   const KIND = DATA.kind || "behaviour";
   const IS_REF = KIND === "refactor";
@@ -303,6 +303,9 @@ TEMPLATE = r"""<!DOCTYPE html>
     // "implemented" is a claim until a test run backs it up.
     if (b.status === "implemented" && !DATA.generated) return "unverified";
     if (b.status === "divergent") return "divergent";
+    // `approved` in the YAML means agreed and not built, which the graph shows as
+    // untested: a separate bucket for "agreed" carried no information.
+    if (b.status === "approved") return "missing";
     return b.status || "draft";
   }
   const effOf = id => behById[id] ? effective(behById[id]) : "none";
@@ -329,12 +332,18 @@ TEMPLATE = r"""<!DOCTYPE html>
       ["invariants", c.invariants, false, ""],
     ];
   } else {
-    const unverified = DATA.behaviours.filter(b => b.status === "implemented").length;
+    // Count by the status the graph actually paints, so the header cannot claim
+    // "14 untested" while every node is drawn as proposed.
+    const tally = {};
+    DATA.behaviours.forEach(b => { const e = effective(b); tally[e] = (tally[e] || 0) + 1; });
+    const jumpFor = k => ({ implemented: "implemented", unverified: "implemented", missing: "missing",
+                            proposed: "proposed", fail: "fail" }[k] || "");
     stats = [["behaviours", c.behaviours, false, ""]];
-    if (DATA.generated) stats.push(["passing", c.passing, false, ""], ["failing", c.failing, c.failing > 0, "fail"]);
-    else stats.push(["implemented, unverified", unverified, unverified > 0, ""]);
+    ORDER.forEach(k => {
+      if (!tally[k]) return;
+      stats.push([RANK_LABEL[k], tally[k], k === "fail" || k === "divergent" || k === "missing", jumpFor(k)]);
+    });
     stats.push(
-      ["untested", c.untested, c.untested > 0, "missing"],
       ["dead refs", c.deadRefs, c.deadRefs > 0, ""],
       [c.uncoveredTransitions === 1 ? "uncovered transition" : "uncovered transitions", c.uncoveredTransitions, c.uncoveredTransitions > 0, ""],
     );
@@ -370,7 +379,7 @@ TEMPLATE = r"""<!DOCTYPE html>
   $$(".tab").forEach(b => b.addEventListener("click", () => setTab(b.dataset.tab)));
 
   // ---- filters -----------------------------------------------------------
-  const filterValues = ["implemented", "approved", "missing", "fail"];
+  const filterValues = ["implemented", "missing", "proposed", "fail"];
   $("#filters").innerHTML = filterValues.map(s =>
     `<button class="fchip" data-v="${s}" data-on="false" style="color:${PAL[s]}"><span class="dot"></span>${RANK_LABEL[s]}</button>`).join("");
   $$(".fchip").forEach(chip => chip.addEventListener("click", () => {
@@ -392,7 +401,9 @@ TEMPLATE = r"""<!DOCTYPE html>
     if (state.filters.size) {
       const eff = effective(b);
       const untested = !(b.tests || []).length || eff === "missing";
-      const ok = state.filters.has(eff) || (state.filters.has("missing") && untested);
+      const built = eff === "implemented" || eff === "unverified";
+      const ok = state.filters.has(eff) || (state.filters.has("missing") && untested)
+        || (state.filters.has("implemented") && built);
       if (!ok) return false;
     }
     if (!state.q) return true;
@@ -890,10 +901,10 @@ TEMPLATE = r"""<!DOCTYPE html>
     const legendItems = IS_REF
       ? [["done", "done"], ["doing", "doing"], ["todo", "todo"], ["blocked", "blocked"]]
       : DATA.generated
-        ? [["implemented", "implemented & passing"], ["approved", "approved, not built"],
-           ["missing", "untested"], ["fail", "failing"]]
-        : [["unverified", "implemented, unverified"], ["approved", "approved, not built"],
-           ["missing", "untested"], ["fail", "failing"]];
+        ? [["implemented", "implemented & passing"], ["missing", "untested"],
+           ["proposed", "proposed"], ["fail", "failing"]]
+        : [["unverified", "implemented"], ["missing", "untested"],
+           ["proposed", "proposed"], ["fail", "failing"]];
     $("#legend").innerHTML = legendItems.map(([k, label]) =>
       `<span><i style="background:${PAL[k]};opacity:.55"></i>${label}</span>`).join("") +
       (IS_REF

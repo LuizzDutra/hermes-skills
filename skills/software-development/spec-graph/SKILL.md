@@ -1,7 +1,7 @@
 ---
 name: spec-graph
 description: "Behaviour specs as YAML + reviewable graph, before code."
-version: 1.3.11
+version: 1.3.12
 author: Hermes Agent
 license: MIT
 platforms: [linux, macos, windows]
@@ -254,7 +254,7 @@ The HTML is self-contained (no CDN) and adapts to the frame:
 - **Trace** — behaviours → tests → cited files, orphans highlighted.
 - **Table** — plain reading view for review.
 - **Plan / Steps / Checks** — for `kind: refactor`: steps as a dependency graph, step cards with the attached check, and the last check run.
-- **Unverified vs passing** — teal = `implemented` with no test run behind it; green appears only after `spec_verify.py` wrote `results.json`. Never read teal as done, and never "fix" it by editing the colour.
+- **Status colours** — `implemented` is one label with two colours: teal while no test run backs it up, green only after `spec_verify.py` wrote `results.json`. Never read teal as done, and never "fix" it by editing the colour. `approved` in the YAML is painted as **untested** (agreed and not built carries no separate state), and `proposed` has its own colour (`#aa91ee` on a dark frame, `#7a5cf0` on a light one), distinct from the amber untested.
 - **Inspector** — rule, scenarios, tests with pass/fail, refs with `open` actions, and an **Ask to change this behaviour** button that sends a prompt back into the chat. Each scenario block inside the behaviour opens `showScenario` (id, `given`, `when`, `then` one item per line, and a link back to the behaviour); invariant and context cards open the same panel through `showMeta`. Anything that clamps in a card or in the graph label must be readable in the inspector — a truncated rule with no destination is a dead end.
 
 Use the frame: one `::preview{file="..."}` line, no prose dump of the whole spec. Point at the 2-3 behaviours that need a decision. When the user asks to open a graph by name, re-render it first — the file on disk may predate the last edit to the YAML.
@@ -272,7 +272,7 @@ Use the frame: one `::preview{file="..."}` line, no prose dump of the whole spec
 | 25 behaviours in one file | Two capabilities; split |
 | A test with no behaviour link | `spec_link.py` suggests the node id; the graph shows it amber until confirmed |
 | `BEH-001` stamped into every test name | A convention the repo did not ask for; use explicit links |
-| "Implemented" with no tests | It is `approved`, not `implemented` |
+| "Implemented" with no tests | It is `untested`; the claim needs a run and a linked test |
 | Everything green before any test ran | Without `results.json` every claim is teal/unverified; green is earned by a run |
 | Editing a shipped spec for unreleased behaviour | Use a delta spec |
 

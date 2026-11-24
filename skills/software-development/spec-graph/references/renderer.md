@@ -21,6 +21,9 @@ that fails offline.
 - **The selected node stays visible.** `openInspector()` re-fits and
   `focusNode()` centres the selection inside `usableW()` — the stage width minus
   an overlay inspector. Skip it and the panel covers the node you just clicked.
+  Below 880px the inspector is a block after the stage instead of an overlay:
+  when it is in flow (`position: static`), `openInspector()` scrolls it into
+  view — a panel that opens below the fold reads as a click that did nothing.
 - **Height follows content.** The stage is sized from the node bbox, clamped to
   340–700px; a fixed tall stage leaves the chat frame mostly empty.
 - **React to width, not height.** The `ResizeObserver` ignores height-only
@@ -49,7 +52,9 @@ that fails offline.
   and those only when non-empty (a `flow` step has none; the old "none" rows
   just pushed the behaviours out of view). Machine edges carry the transition
   **object** in `edge.transition`; code that treats it as an id silently renders
-  nothing.
+  nothing. A `flow` edge has no transition at all: its click opens the
+  destination step (`showStep(edge.to)`), never `showTransition(undefined)` —
+  the throw leaves every flow edge dead.
 - **Bind clicks by `data-*` attribute, not by matching row text.** A regex over
   the row's text also matches ids quoted inside another row's prose, and the
   click opens the wrong panel.
@@ -87,6 +92,25 @@ that fails offline.
   every clickable group `data-hit` (`node` / `edge`), suppress the click a drag
   would deliver, and probe with `Input.dispatchMouseEvent`, never with a
   constructed event.
+- **Hairline geometry needs a fat, invisible hit target.** A 1.8px edge stroke
+  is effectively unclickable with a real pointer; overlay a 14px transparent
+  stroke carrying the same `data-hit` and wire the edge label to the same
+  handler — the label is the click the user tries first.
+- **Focus outlines are keyboard-only.** Node groups with `tabindex` get a
+  focus ring on click; a square outline on a circular node reads as a broken
+  render where the panel should have opened. Scope the outline to
+  `:focus-visible`.
+
+- **A status missing from `ORDER` drops its cards.** Cards are grouped by
+  `effective(b)` and only `ORDER` keys are rendered, so a status the YAML still
+  allows must map to an `ORDER` key before it reaches the grid. `approved` maps
+  to `missing` for that reason — reintroducing it as a bucket means adding it to
+  `ORDER`, `RANK`, `RANK_LABEL` and `PAL` together, or behaviours vanish from the
+  Behaviours tab while the header still counts them.
+- **The legend is four buckets.** `implemented` (teal without a run, green with
+  one), `untested`, `proposed`, `failing`. `draft` and `divergent` keep colours
+  but stay out of the legend; adding a fifth row means the summary and the
+  filters have to agree with it.
 
 ## Theme
 
