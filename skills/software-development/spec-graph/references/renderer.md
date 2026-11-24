@@ -10,7 +10,8 @@ that fails offline.
 | payload | `build_payload()` in `spec_model.py` | the only data the page knows |
 | layout | `layout()` | depth by BFS from `roots`, one barycenter pass |
 | drawing | `draw()` | SVG only, no canvas, no library |
-| inspector | `showBehaviour` / `showState` / `showTransition` / `showStep` / `showMeta` | rebuilt on each selection |
+| tabs | `renderCards` / `renderScenarios` / `renderTrace` / `renderTable` | one function per tab, re-run on filter change |
+| inspector | `showBehaviour` / `showScenario` / `showState` / `showTransition` / `showStep` / `showMeta` | rebuilt on each selection |
 
 ## Rules that are easy to break
 
@@ -69,9 +70,10 @@ new colour needs both a light and a dark value in `PAL`.
 python spec_render.py <spec> --results results.json --out /tmp/g.html
 ```
 
-Open it at ~760px and ~1100px: the inspector is an overlay below 880px and a
-docked panel above it. Check one selection, one tab switch, and one resize —
-that is where the fit/observer bugs surface.
+Open it at ~760px and ~1100px: below 880px the panel sits in normal flow above
+the cards (full width, page scrolls to it); above it, it is docked as a 320px
+column. Check one selection, one tab switch, and one resize — that is where the
+fit/observer bugs surface.
 
 For a click-path change, drive the real file instead of eyeballing: open the
 rendered HTML over `file://` in the browser and dispatch

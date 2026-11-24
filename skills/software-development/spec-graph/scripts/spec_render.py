@@ -157,7 +157,7 @@ TEMPLATE = r"""<!DOCTYPE html>
     background:var(--card);padding:2px 4px;border-radius:6px;pointer-events:none}
   .legend i{display:inline-block;width:11px;height:9px;border-radius:3px;margin-right:5px;vertical-align:middle}
   .legend span{white-space:nowrap}
-  #body-beh,#body-trace,#body-table{flex:1;min-width:0}
+  #body-beh,#body-scen,#body-trace,#body-table{flex:1;min-width:0}
   #inspector{flex:0 0 320px;width:320px;max-height:700px;overflow:auto;
     border:1px solid var(--bd);border-radius:12px;background:var(--card);
     padding:14px;display:none}
@@ -169,7 +169,8 @@ TEMPLATE = r"""<!DOCTYPE html>
   .sec{margin-top:14px}
   .sec h3{font-size:10.5px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin:0 0 6px;font-weight:650}
   .rule{font-size:13px;line-height:1.5;border-left:2px solid var(--acc);padding-left:10px;margin:0}
-  .sc{border:1px solid var(--bd);border-radius:9px;padding:8px 10px;margin-bottom:7px;font-size:12.5px;line-height:1.5}
+  .sc{border:1px solid var(--bd);border-radius:9px;padding:8px 10px;margin-bottom:7px;font-size:12.5px;line-height:1.5;cursor:pointer}
+  .sc:hover{border-color:var(--muted)}
   .sc .id{font-family:var(--mono);font-size:10.5px;color:var(--muted)}
   .kw{font-family:var(--mono);font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-right:4px}
   ul.tight{margin:0;padding-left:16px;font-size:12.5px;line-height:1.55}
@@ -201,14 +202,10 @@ TEMPLATE = r"""<!DOCTYPE html>
   footer{color:var(--muted);font-size:11px;display:flex;gap:10px;flex-wrap:wrap;font-family:var(--mono)}
   .tip{color:var(--muted);font-size:11.5px}
   @media (max-width:880px){
-    #stage{height:460px}
-    #inspector{position:absolute;right:8px;left:auto;top:8px;bottom:auto;width:320px;
-      max-width:calc(100% - 16px);max-height:calc(100% - 16px);flex:none;
-      z-index:5;box-shadow:0 8px 28px rgba(0,0,0,.2)}
+    main{flex-direction:column}
+    #stage{height:460px;width:100%}
+    #inspector{position:static;width:auto;max-width:none;max-height:none;flex:none;margin-bottom:12px}
     .cards{grid-template-columns:1fr}
-  }
-  @media (max-width:560px){
-    #inspector{left:8px;right:8px;width:auto}
   }
 </style>
 </head>
@@ -227,6 +224,7 @@ TEMPLATE = r"""<!DOCTYPE html>
     <nav class="tabs" role="tablist">
       <button class="tab" id="tab-graph" role="tab" data-tab="graph">Graph</button>
       <button class="tab" id="tab-beh" role="tab" data-tab="behaviours">Behaviours</button>
+      <button class="tab" id="tab-scen" role="tab" data-tab="scenarios">Scenarios</button>
       <button class="tab" id="tab-trace" role="tab" data-tab="trace">Trace</button>
       <button class="tab" id="tab-table" role="tab" data-tab="table">Table</button>
     </nav>
@@ -242,6 +240,7 @@ TEMPLATE = r"""<!DOCTYPE html>
     </div>
     <aside id="inspector" aria-live="polite"></aside>
     <div id="body-beh" style="display:none"></div>
+    <div id="body-scen" style="display:none"></div>
     <div id="body-trace" style="display:none"></div>
     <div id="body-table" style="display:none"></div>
   </main>
@@ -343,8 +342,10 @@ TEMPLATE = r"""<!DOCTYPE html>
 
   // ---- tabs --------------------------------------------------------------
   const hasGraph = IS_REF || !!(DATA.machine || DATA.flow);
-  const views = { graph: $("#stage"), behaviours: $("#body-beh"), trace: $("#body-trace"), table: $("#body-table") };
+  const views = { graph: $("#stage"), behaviours: $("#body-beh"), scenarios: $("#body-scen"),
+                  trace: $("#body-trace"), table: $("#body-table") };
   if (!hasGraph) $("#tab-graph").disabled = true;
+  if (IS_REF) $("#tab-scen").style.display = "none";
   if (IS_REF) {
     $("#tab-graph").textContent = "Plan";
     $("#tab-beh").textContent = "Steps";
@@ -359,6 +360,7 @@ TEMPLATE = r"""<!DOCTYPE html>
     Object.entries(views).forEach(([k, el]) => el.style.display = k === tab ? "" : "none");
     if (tab === "graph") { draw(); }
     if (tab === "behaviours") { IS_REF ? renderStepCards() : renderCards(); }
+    if (tab === "scenarios") { renderScenarios(); }
     if (tab === "trace") { IS_REF ? renderChecks() : renderTrace(); }
     if (tab === "table") { IS_REF ? renderStepTable() : renderTable(); }
     if (tab !== "graph") $("#inspector").classList.remove("open");
@@ -405,6 +407,7 @@ TEMPLATE = r"""<!DOCTYPE html>
   function applyFilters() {
     if (state.tab === "graph") draw();
     if (state.tab === "behaviours") { IS_REF ? renderStepCards() : renderCards(); }
+    if (state.tab === "scenarios") renderScenarios();
     if (state.tab === "table") { IS_REF ? renderStepTable() : renderTable(); }
     if (state.tab === "trace") { IS_REF ? renderChecks() : renderTrace(); }
   }
@@ -455,10 +458,10 @@ TEMPLATE = r"""<!DOCTYPE html>
     const eff = effective(b);
     const tr = trById[b.transition];
     const sc = b.scenarios.map(s => `
-      <div class="sc"><div class="id">${s.id}</div>
-        ${s.given.length ? `<div><span class="kw">given</span>${s.given.join("; ")}</div>` : ""}
-        <div><span class="kw">when</span>${s.when}</div>
-        <div><span class="kw">then</span>${s.then.join("; ")}</div></div>`).join("");
+      <div class="sc" data-scen="${s.id}" title="open the full scenario"><div class="id">${s.id}</div>
+        ${s.given.length ? `<div><span class="kw">given</span><ul class="tight">${s.given.map(g => `<li>${esc(g)}</li>`).join("")}</ul></div>` : ""}
+        <div><span class="kw">when</span><div>${esc(s.when)}</div></div>
+        <div><span class="kw">then</span><ul class="tight">${s.then.map(t => `<li>${esc(t)}</li>`).join("")}</ul></div></div>`).join("");
     const tests = b.tests.length
       ? b.tests.map(t => {
           const r = (b.results || []).find(x => x.name === t) || (b.results || [])[0];
@@ -476,6 +479,37 @@ TEMPLATE = r"""<!DOCTYPE html>
       <div class="sec"><h3>Repo references</h3>${refRows(b.refs)}</div>
       <div class="acts"><button class="btn" ${send(`Change ${b.id} (${b.title}) in ${DATA.source}. Ask me what I want different, then show the spec diff before touching code.`)}>Ask to change this behaviour</button></div>
     `, tr ? tr.from[0] : "");
+    $$("[data-scen]", insp).forEach(el => el.addEventListener("click", () => showScenario(el.dataset.scen)));
+  }
+  function scenarioEntry(id) {
+    for (const b of DATA.behaviours) {
+      const sc = (b.scenarios || []).find(s => s.id === id);
+      if (sc) return { sc, b };
+    }
+    return null;
+  }
+  // A scenario is the unit a test is written from, so it gets its own panel:
+  // given/when/then one item per line, plus the behaviour it belongs to.
+  function showScenario(id) {
+    const hit = scenarioEntry(id); if (!hit) return;
+    const { sc, b } = hit;
+    state.sel = null;
+    const rows = (items, kw) => items.length
+      ? `<div class="sec"><h3>${kw}</h3><ul class="tight">${items.map(i => `<li>${esc(i)}</li>`).join("")}</ul></div>`
+      : "";
+    openInspector(`
+      <h2>Scenario</h2>
+      <div class="sub">${sc.id} · ${b.id}</div>
+      <p class="rule">${esc(sc.when)}</p>
+      ${rows(sc.given, "Given")}
+      ${rows(sc.then, "Then")}
+      <div class="sec"><h3>Behaviour</h3>
+        <div class="ref" data-open-beh="${b.id}">
+          <span class="tdot" style="background:${PAL[effOf(b.id)]}"></span>
+          <span>${b.id} ${esc(b.title)}</span><button>open</button></div></div>
+      <div class="acts"><button class="btn" ${send(`Change ${sc.id} of ${b.id} in ${DATA.source}. Ask me what I want different, then show the spec diff before touching code.`)}>Ask to change this scenario</button></div>
+    `);
+    $$("[data-open-beh]", insp).forEach(row => row.addEventListener("click", () => showBehaviour(row.dataset.openBeh)));
   }
   function metaEntry(id) {
     const conv = (DATA.conventions || []).find(c => c.id === id);
@@ -1058,6 +1092,28 @@ TEMPLATE = r"""<!DOCTYPE html>
       <thead><tr><th>id</th><th>behaviour</th><th>status</th><th>transition</th><th>tests</th><th>refs</th></tr></thead>
       <tbody>${rows}</tbody></table></div>`;
     $$("[data-beh]", box).forEach(row => row.addEventListener("click", () => showBehaviour(row.dataset.beh)));
+  }
+
+  // ---- scenarios ---------------------------------------------------------
+  function renderScenarios() {
+    const pairs = DATA.behaviours.flatMap(b => (b.scenarios || []).map(sc => ({ b, sc })));
+    const rows = pairs.map(({ b, sc }) => {
+      const dim = !matches(b);
+      return `<tr class="${dim ? "dim" : ""}" data-scen="${sc.id}" style="cursor:pointer">
+        <td class="mono">${sc.id}</td>
+        <td class="mono">${b.id}</td>
+        <td>${esc(sc.when)}</td>
+        <td class="mono">${sc.given.length}</td>
+        <td class="mono">${sc.then.length}</td></tr>`;
+    }).join("");
+    const box = $("#body-scen");
+    box.innerHTML = `<div style="display:flex;gap:16px;align-items:baseline;margin-bottom:6px">
+        <span class="tip">click a row for given / when / then and the behaviour it belongs to</span>
+        <span class="tip">${pairs.length} scenario${pairs.length === 1 ? "" : "s"}</span></div>
+      <div style="overflow:auto;max-height:660px"><table>
+      <thead><tr><th>id</th><th>behaviour</th><th>when</th><th>given</th><th>then</th></tr></thead>
+      <tbody>${rows || '<tr><td colspan="5">no scenarios</td></tr>'}</tbody></table></div>`;
+    $$("tr[data-scen]", box).forEach(row => row.addEventListener("click", () => showScenario(row.dataset.scen)));
   }
 
   // ---- refactor: steps, checks, invariants --------------------------------
