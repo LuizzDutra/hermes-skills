@@ -1,7 +1,7 @@
 ---
 name: commit
 description: "Use when committing: Conventional Commits, pt-BR body."
-version: 1.2.0
+version: 1.3.0
 author: LuizzDutra (ported from the OpenCode config skill of the same name)
 license: MIT
 platforms: [linux, macos, windows]
@@ -79,6 +79,11 @@ Nothing lands until the message and the file list are agreed.
   the `BREAKING CHANGE:` footer stay English either way.
 - **body**: optional; explain *why*, not *what* — the diff shows the what.
   Wrap at 72 chars.
+- **Structural commits carry the consequences in the body.** For a move, rename or
+  split, the diff is a wall of R-lines; list the semantic shifts it hides (path
+  indices that changed meaning, dirs newly in lint scope, build context that
+  changed, duplicate config entries that collapsed) — that is the why the diff
+  cannot show.
 
 Example:
 
@@ -93,7 +98,9 @@ passar. O hook bloqueia por basename em qualquer ferramenta.
 
 - One logical change per commit; offer to split unrelated changes.
 - Never amend, rebase, or force-push commits that are already pushed without
-  explicit confirmation. `git push --force` is hard-denied in this profile's
+  explicit confirmation. Amending your own unpushed commit is the move when
+  the user asks to redo it ("refaça o commit") — keep the message in a temp
+  file and pass `-F`, so pt-BR text survives shell quoting. `git push --force` is hard-denied in this profile's
   `approvals.deny` — do not attempt it; report it instead.
 - Run the repository's own checks before committing when they are cheap
   (tests, lint, build). For anything larger, load `requesting-code-review`
