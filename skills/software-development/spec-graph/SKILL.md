@@ -1,7 +1,7 @@
 ---
 name: spec-graph
 description: "Behaviour specs as YAML + reviewable graph, before code."
-version: 1.4.0
+version: 1.4.1
 author: Hermes Agent
 license: MIT
 platforms: [linux, macos, windows]
@@ -117,7 +117,7 @@ Exit codes, because "it printed something" is not a result:
 - **≤15 behaviours per spec.** More means two capabilities — split them.
 - **The graph is generated only from the YAML that linted.** An invalid spec still renders, with a red banner, so review can continue — that render is never evidence.
 - **Never hand-edit `graph.html`.** If a label is wrong, the YAML or the payload is wrong.
-- **A render is verified by measurement, not by vision** (see the review surface).
+- **A render is verified by measurement, not by vision** — and only when you changed the renderer (see the review surface).
 - **A refactor plan states a checkable goal.** If no command can tell you whether the refactor finished, it is a task list, not a plan.
 - **Link tests in the spec, not in their names.** The default `link_style: explicit` keeps `BEH-NNN` out of the repo; `spec_link.py --check` catches a renamed or deleted test.
 - **No new dependency in the repo for this** (no Cucumber, no pydantic). The scripts are stdlib-only by design.
@@ -136,9 +136,9 @@ The HTML is self-contained (no CDN) and adapts to the frame.
 
 **Colour is status, never decoration.** `implemented` is teal until `spec_verify.py` writes `results.json` and green after; `approved` paints as untested, `proposed` has its own colour, a failing linked test paints red, and a `done` step with a failing check stays red. Never read teal as done and never "fix" it by editing the palette. The four buckets, the palette and the light/dark rule are in `references/renderer.md`.
 
-**Author the graph to the frame.** Keep a machine or flow at ≤5 depth layers, give **every** step an incoming `next:` link, and model a retry loop as a step that exits to quarantine rather than as a back-edge the layering cannot fold. Check the fit by measurement at a 960px viewport, not by looking at a picture, and restructure the spec when it overflows instead of lowering the clamp.
+**The render is a view, not the deliverable.** The preview pans, zooms and refits, and the panel docks or scrolls; a column that clips at 960px or a flow with six layers is a viewing nuisance, never a spec defect. Do not add, merge, split or reorder behaviours and steps to make a picture fit, do not compare viewports, and do not volunteer layout findings — the YAML describes the system, the graph shows what the YAML says, and the reviewer's question is about the behaviour.
 
-**Measure the surface, never look at it.** The page exposes `window.__probe()`: one call returns the fit (`bbox × k` against the stage width), the inspector's rect and `position`, whether a click actually opened a panel (`open` class, section count), any node off screen, the bucket counts and the computed colours. Evaluate it and read the numbers. No screenshot of a render you just generated and no vision pass on it — the file's state is a payload plus a stylesheet you already have, and "looks right" is not a claim a later run can re-check. Vision belongs to images the repo produces as output, never to the review surface itself. Click paths still need **real pointer input** (`Input.dispatchMouseEvent`): a `dispatchEvent(new MouseEvent('click'))` probe never goes through the `setPointerCapture` the pan gesture installs, so it can pass while a real click does nothing.
+**Measure only when you touched the renderer.** The page exposes `window.__probe()`: one call returns the fit (`bbox × k` against the stage width), the inspector's rect and `position`, whether a click actually opened a panel, any node off screen, the bucket counts and the computed colours. That is for editing `spec_render.py` and for click paths — a spec turn does not run it. Either way, no screenshot and no vision pass on a render you just generated: the numbers are for whoever wrote the renderer, the YAML is what the reviewer reads. Vision belongs to images the repo produces as output, never to `graph.html`. A click still needs **real pointer input** (`Input.dispatchMouseEvent`): a `dispatchEvent(new MouseEvent('click'))` probe never goes through the `setPointerCapture` the pan gesture installs, so it can pass while a real click does nothing.
 
 **Show it, don't dump it.** One `::preview{file="..."}` line, no prose copy of the spec. When the user asks to open a graph by name, re-render first: the file on disk may predate the last edit to the YAML.
 
@@ -151,13 +151,14 @@ The HTML is self-contained (no CDN) and adapts to the frame.
 | A test with no behaviour link | `spec_link.py` suggests the node id; the graph shows it amber until confirmed |
 | "Implemented" with no tests | It is `untested`; the claim needs a run and a linked test |
 | Everything green before any test ran | Without `results.json` every claim is teal; green is earned by a run |
+| A graph that clips or looks dense at 960px | It pans and refits. Reshaping the spec for the picture changes the system being specified |
 
 ## Verification checklist
 
 - [ ] `spec_lint.py` passes (warnings read, not ignored)
 - [ ] every ref path and symbol exists; every cited file was opened
 - [ ] every behaviour has ≥1 scenario, one `when` each, observable `then`s
-- [ ] graph rendered from this exact file, preview shown, `window.__probe()` read
+- [ ] graph rendered from this exact file and preview shown (run `window.__probe()` only if you changed the renderer)
 - [ ] approvals came from the user, in a later turn
 - [ ] `spec_link.py --check` passes: every linked test id still exists
 - [ ] `spec_verify.py` run after implementation; no `fail`, no `missing`

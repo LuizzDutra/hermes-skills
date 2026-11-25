@@ -93,7 +93,7 @@ flow:
       next: []
 ```
 
-`next` may be a list (branching). Steps are referenced from `behaviour.transition` the same way transitions are, and a step with no behaviour gets the same warning as an uncovered transition. Every step needs an incoming `next:` from somewhere: an orphan lands in the last column and widens the whole graph past what the frame can hold (see the review surface in `SKILL.md`).
+`next` may be a list (branching). Steps are referenced from `behaviour.transition` the same way transitions are, and a step with no behaviour gets the same warning as an uncovered transition. A step that nothing points at only costs a column in the picture — it lands in the last layer and widens the drawing, which the user pans. That is a layout detail, not a spec defect: do not invent a `next:` link to tidy the graph.
 
 ## Delta specs
 

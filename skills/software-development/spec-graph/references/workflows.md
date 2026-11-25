@@ -149,7 +149,7 @@ The hard-won lessons of running a plan — placeholder checks at completion, con
 
 ## Review etiquette in chat
 
-- One `::preview{file="..."}` line per reply, and no screenshot of your own render: the numbers that decide fit, panel and colour come from `window.__probe()` (`renderer.md`).
+- One `::preview{file="..."}` line per reply, and no screenshot of your own render. Fit and colour comparisons belong to whoever edits the renderer (`renderer.md`), not to a spec review.
 - Two or three sentences: what changed, what needs a decision.
 - Number the open questions; the user answers "1 yes, 2 email only" in one line.
 - Never paste the whole YAML into chat. Point at ids.
