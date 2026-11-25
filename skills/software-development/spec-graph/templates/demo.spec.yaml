@@ -1,0 +1,107 @@
+# Demo spec — a copy-paste fixture for the review surface, not a real capability.
+#
+# Four behaviours, one per status bucket, so a single render shows every colour
+# at once. Copy it into a scratch repo as .specs/counter/spec.yaml, add the two
+# fixture tests named under `tests:`, and render it.
+#
+# Where each colour comes from (references/format.md, "Status lifecycle"):
+#   teal    implemented, no test run yet — the YAML claim is unverified.
+#   green   implemented, and a real test run passed.
+#   amber   approved, painted as "untested": agreed, not built.
+#   purple  proposed.
+#   red     a declared test ran and failed. The YAML status does not override it.
+#
+# Green and red exist only after a REAL run: spec_verify.py executes
+# repo.commands.test, parses the JUnit XML and writes results.json. Nothing else
+# may write that file. Teal is what you get by rendering WITHOUT results.json, so
+# a demo that must show teal and green renders twice instead of deleting the
+# evidence:
+#   python <skill>/scripts/spec_render.py .specs/counter/spec.yaml --out graph-norun.html
+#   python <skill>/scripts/spec_verify.py .specs/counter/spec.yaml --render
+# The first render goes to another file on purpose: the default output is
+# graph.html, and the verified render would replace it.
+#
+# There is no `refs:` anywhere in this file, deliberately: a ref must point at a
+# file that exists, and a fixture copied into an empty scratch directory has
+# none. That is also why this file lints with zero errors on a fresh copy — add
+# refs only once the code they cite is really there.
+
+spec: counter-demo
+title: Counter (review-surface demo)
+version: 1
+status: proposed
+tier: micro
+
+objective: >
+  One behaviour per status bucket, used to demonstrate the review surface. It is
+  copied into a scratch repository, backed by two small tests and rendered; it
+  never ships as a real capability's spec.
+
+repo:
+  commands:
+    test: "pytest -q --junitxml=reports/junit.xml"
+    junit: reports/junit.xml
+
+behaviours:
+  # implemented and passing → teal before the run, green after it.
+  - id: BEH-001
+    title: Incrementing raises the count by one
+    rule: "WHEN the increment action runs THE SYSTEM SHALL raise the count by one."
+    status: implemented
+    scenarios:
+      - id: SC-001
+        given:
+          - "a counter showing 0"
+        when: "the user increments it"
+        then:
+          - "the counter shows 1"
+    tests:
+      - tests/test_counter.py::test_increment_from_zero
+
+  # approved → amber, the bucket the graph labels "untested": the rule is agreed
+  # and the code is not written.
+  - id: BEH-002
+    title: Decrementing at zero keeps the count at zero
+    rule: "WHEN the decrement action runs on a counter showing 0 THE SYSTEM SHALL keep the count at 0."
+    status: approved
+    scenarios:
+      - id: SC-002
+        given:
+          - "a counter showing 0"
+        when: "the user decrements it"
+        then:
+          - "the counter still shows 0"
+    tests: []
+
+  # proposed → its own colour; the reviewer is being asked to agree to it.
+  - id: BEH-003
+    title: Undo history keeps the last five changes
+    rule: "WHERE undo history is enabled THE SYSTEM SHALL expose the last five changes."
+    status: proposed
+    scenarios:
+      - id: SC-003
+        given:
+          - "a counter with undo history enabled"
+        when: "the user increments it six times"
+        then:
+          - "five changes are offered for undo"
+          - "the oldest change is dropped"
+    tests: []
+
+  # implemented but the declared test FAILS → red. A claim in the YAML is not
+  # evidence: the fixture test asserts the restored value and fails while undo is
+  # still a stub. Fix the code, or demote the behaviour — but the colour follows
+  # the run, not the label.
+  - id: BEH-004
+    title: Undo restores the count from before the last change
+    rule: "WHEN undo runs THE SYSTEM SHALL restore the count to its value before the last change."
+    status: implemented
+    scenarios:
+      - id: SC-004
+        given:
+          - "a counter at 0 that was incremented once"
+        when: "the user undoes the change"
+        then:
+          - "the counter shows 0 again"
+    tests:
+      - tests/test_counter.py::test_undo_restores_previous_value

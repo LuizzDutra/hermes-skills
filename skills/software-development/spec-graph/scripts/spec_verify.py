@@ -12,6 +12,26 @@ Matching rules, in order:
   3. a BEH-NNN token in the test name (test_BEH_004_paying_twice)
 
 Writes `<spec dir>/results.json` and, with --render, refreshes `graph.html`.
+Exit codes: 0 every declared behaviour passed, 1 a behaviour failed or is
+missing, 2 no JUnit report (a setup error, never a green run).
+
+results.json — written here, read by spec_render.py --results:
+
+    {
+      "generated": "2026-11-22T22:18:43-03:00",
+      "command": "pytest -q --junitxml=reports/junit.xml",
+      "exit_code": 0,
+      "totals": {"tests": 14, "passed": 14, "failed": 0, "skipped": 0},
+      "behaviours": {
+        "BEH-001": {"status": "pass",
+                    "tests": [{"name": "tests/test_order.py::test_...", "ok": true}]}
+      },
+      "unmapped": ["tests/test_misc.py::test_smoke"]
+    }
+
+behaviours.<id>.status is "pass", "fail" or "missing"; an absent entry means
+the behaviour declares no test. The graph keys its green/red off this file's
+presence: without it, an `implemented` behaviour stays teal.
 """
 
 from __future__ import annotations

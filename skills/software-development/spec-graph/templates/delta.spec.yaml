@@ -1,0 +1,131 @@
+# Delta spec template — .specs/<capability>/delta-<change>.yaml
+#
+# A delta describes a behaviour change to code that already shipped. It carries
+# only the affected subgraph: the behaviours that change or appear, plus — when
+# the change moves state — just the states and edges it touches. Everything else
+# stays in the main spec.yaml; copying it here drifts the first time the main
+# spec moves.
+#
+# Fields this file adds to the shared behaviour format:
+#   delta_of         capability id this delta amends. The renderer keys on it to
+#                    empty the "removed" list — a behaviour absent from a delta is
+#                    still in the main spec, not deleted.
+#   current          what happens today, observably: the sentence a reviewer
+#                    checks against the running system.
+#   new              what must happen after the change.
+#   must_not_change  BEH-NNN ids from the main spec this change must leave alone.
+#                    They are deliberately absent from this file.
+#
+# Write it to its OWN html. The default output is graph.html in the spec's
+# directory, which would overwrite the main graph sitting next to it:
+#   python <skill>/scripts/spec_render.py .specs/order-lifecycle/delta-cancel-shipped.yaml \
+#     --diff .specs/order-lifecycle/spec.yaml \
+#     --out .specs/order-lifecycle/delta-cancel-shipped.html
+#
+# `--diff <main spec.yaml>` is what draws the change rings: an id present in both
+# files with different content reads as "changed", an id only here reads as
+# "added". So a modified behaviour keeps the id it shipped with, and a genuinely
+# new operation takes a new id.
+#
+# Lint has no delta-specific rule: spec_lint.py validates this file as an
+# ordinary behaviour spec and does NOT need the parent spec.yaml to exist. Only
+# the render above reads the parent, through --diff.
+#
+# Folding: when the change ships and the tests pass, merge these behaviours into
+# spec.yaml, bump its `version` (this file carries the number it becomes) and
+# delete the delta. Count first — a fold that pushes the capability past 15
+# behaviours is a new capability, not a larger spec.
+
+spec: order-lifecycle
+delta_of: order-lifecycle
+title: Allow cancelling an order that has shipped
+version: 3
+status: proposed
+tier: standard
+
+current: >
+  Cancelling a shipped order is rejected with "already shipped". The customer has
+  to return the item and wait for the refund to be raised by hand.
+
+new: >
+  A shipped order can be cancelled: it moves to refunding, the refund is recorded
+  against the order, and the provider's confirmation moves it to refunded.
+
+must_not_change: [BEH-002, BEH-007]
+
+objective: >
+  Shipped orders become cancellable from the order screen with the refund tracked
+  on the order, and the customer is told a refund is in progress. The
+  cancellation window, the stock rules and the audit trail for unshipped orders
+  must stay exactly as they are.
+
+repo:
+  commands:
+    test: "pytest -q --junitxml=reports/junit.xml"
+    junit: reports/junit.xml
+
+# Only the edges this change touches, never the capability's whole machine.
+# `initial` is the state the change starts from, which is rarely the spec's real
+# initial state.
+machine:
+  initial: shipped
+  states:
+    - id: shipped
+      name: Shipped
+      description: "Handed to the carrier; no refund raised yet."
+    - id: refunding
+      name: Refunding
+      description: "Cancelled after shipping; waiting for the provider."
+    - id: refunded
+      name: Refunded
+      description: "The provider confirmed the refund."
+  transitions:
+    - id: T-3
+      from: shipped
+      to: refunding
+      event: cancel
+      guard: "the order has shipped"
+      effect: "raises the refund and stores its id"
+    - id: T-4
+      from: refunding
+      to: refunded
+      event: refund_confirmed
+      guard: "the provider confirms the refund"
+      effect: "stores refunded_at"
+
+behaviours:
+  # Changed behaviour: keep the id it shipped with. Same id with different content
+  # is exactly what --diff rings as changed.
+  - id: BEH-004
+    title: Cancelling a shipped order starts a refund
+    rule: "WHEN a shipped order is cancelled THE SYSTEM SHALL move it to refunding and record the refund id."
+    status: proposed
+    transition: T-3
+    scenarios:
+      - id: SC-004
+        given:
+          - "an order that has shipped"
+          - "a captured payment"
+        when: "the customer cancels the order"
+        then:
+          - "the order is refunding"
+          - "the refund id is stored on the order"
+          - "the order screen shows a refund in progress"
+    tests: []
+
+  # A new operation is its own behaviour with its own id — never a second clause
+  # inside BEH-004's `when`.
+  - id: BEH-012
+    title: A confirmed refund closes the order
+    rule: "WHEN the payment provider confirms the refund THE SYSTEM SHALL move the order to refunded and record refunded_at."
+    status: proposed
+    transition: T-4
+    scenarios:
+      - id: SC-012
+        given:
+          - "an order in refunding"
+        when: "the provider confirms the refund"
+        then:
+          - "the order is refunded"
+          - "refunded_at is set"
+    tests: []

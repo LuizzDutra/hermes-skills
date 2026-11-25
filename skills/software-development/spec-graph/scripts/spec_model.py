@@ -1,9 +1,31 @@
 """spec_model.py — load, validate and index a spec-graph YAML file.
 
 Standard library only. Ships a small YAML *subset* parser so the skill works
-on a bare Python install; the supported subset is documented in
-references/format.md and is deliberately close enough to real YAML that files
-also load with PyYAML.
+on a bare Python install; the supported subset is deliberately close enough to
+real YAML that the same files also load with PyYAML. references/format.md
+documents the schema and links here for the grammar.
+
+The subset, by construct:
+    block mappings and sequences      indentation only, no tabs
+    scalars                           plain, 'single' and "double" quoted
+    booleans and null                 true/false/null (and True/FALSE variants)
+    numbers                           int and float, negative included
+    inline sequences                  [a, b]
+    inline mappings                   {k: v}
+    comments                          # to end of line, never inside quotes
+    block scalars                     | and >, with -/+ chomping indicators
+Not supported: anchors, aliases, multi-document files, tags, and multi-line
+plain scalars — use a > block for a paragraph.
+
+Two rules follow from that, and both bite silently when ignored:
+    quote any value containing ": " or starting with "-", "?", or "#"
+    never use on/yes/no/off as a key — YAML 1.1 parsers read them as booleans
+    (the schema says `event`, not `on`, for exactly this reason)
+
+The subset round-trips identically under PyYAML for the files this skill
+produces, so other tooling can read them. When changing the parser, diff its
+output against yaml.safe_load on a real spec before trusting it: YAML 1.1
+boolean keys and folded-scalar chomping are where the two diverge.
 
 Public API:
     load(path)                     -> dict

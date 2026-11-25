@@ -1002,6 +1002,98 @@ TEMPLATE = r"""<!DOCTYPE html>
     window.__applyView();
   }
 
+  // ---- probe -------------------------------------------------------------
+  // window.__probe() answers, in one call, the five questions a render has to
+  // answer — one field group each:
+  //   fit    — does the drawn graph fit the stage at the current zoom?
+  //   panel  — is #inspector open, and is it an overlay or in flow below?
+  //   click  — did a selection put text in the panel (sections, chars)?
+  //   node   — which nodes are not visible inside the stage rect?
+  //   colour — what stroke/fill does the page paint for a node and a status chip?
+  // The result is JSON-serialisable: no DOM nodes, no functions.
+  function paintOf(el) {
+    if (!el) return null;
+    const cs = getComputedStyle(el);
+    // SVG nodes carry stroke/fill; an HTML chip carries a background instead —
+    // `fill` computes to black on HTML, so it must not be read there. Both land
+    // under the same keys so one read answers "which colour is this?".
+    const first = (...vals) => {
+      for (const val of vals) {
+        if (val && val !== "none" && val !== "transparent" && val !== "rgba(0, 0, 0, 0)") return val;
+      }
+      return null;
+    };
+    const isSvg = el.namespaceURI === "http://www.w3.org/2000/svg";
+    return { stroke: first(cs.stroke), fill: first(isSvg ? cs.fill : cs.backgroundColor) };
+  }
+
+  window.__probe = function probe() {
+    const stage = $("#stage"), m = window.__model || null, vt = window.__vt || { k: 1 };
+    const sr = stage.getBoundingClientRect();
+    const stageShown = sr.width > 0 && sr.height > 0;
+
+    // fit — the exact comparison references/renderer.md asks for by hand.
+    let bbox = { width: 0 };
+    try { if (view.getBBox) bbox = view.getBBox(); } catch (e) { /* empty <g> */ }
+    const need = Math.round(bbox.width * vt.k);
+    const have = stage.clientWidth - 48;
+
+    // panel / click — a closed panel is display:none, so it measures 0×0 and
+    // cannot overlap the stage.
+    const ir = insp.getBoundingClientRect();
+    const position = getComputedStyle(insp).position;
+    const shown = ir.width > 0 && ir.height > 0;
+    // The panels are `div.sec` blocks; count a literal <section> where one
+    // exists and fall back to those blocks, or this would read 0 for ever.
+    const sections = insp.querySelectorAll("section").length || insp.querySelectorAll(".sec").length;
+
+    // node-visibility — draw() appends one group per model node, in model order.
+    const offscreen = [];
+    if (m && stageShown) {
+      $$('[data-hit="node"]', view).forEach((g, i) => {
+        const n = m.nodes[i];
+        if (!n) return;
+        const r = g.getBoundingClientRect();
+        if (r.left < sr.left - 1 || r.right > sr.right + 1 ||
+            r.top < sr.top - 1 || r.bottom > sr.bottom + 1) offscreen.push(n.id);
+      });
+    }
+
+    // colour — a node's circle and the first status chip (legend, then filter).
+    const nodeEl = $('[data-hit="node"] circle', view);
+    const chipEl = $("#legend i") || $("#filters .fchip .dot");
+
+    // buckets — the page's own effective() mapping, ordered by ORDER, with any
+    // status ORDER does not know surfaced last instead of dropped. A refactor
+    // plan paints steps and carries no behaviours, so this stays empty there
+    // (its counts live in DATA.counts) rather than inventing a second mapping.
+    const counts = {};
+    DATA.behaviours.forEach(b => { const k = effective(b); counts[k] = (counts[k] || 0) + 1; });
+    const buckets = {};
+    [...ORDER.filter(k => counts[k]), ...Object.keys(counts).filter(k => !ORDER.includes(k))]
+      .forEach(k => { buckets[k] = counts[k]; });
+    buckets.total = DATA.behaviours.length;
+
+    return {
+      fit: {
+        need, have, ok: need <= have + 1, k: vt.k,
+        layers: m ? new Set(m.nodes.map(n => n.depth)).size : 0,
+      },
+      stage: { w: stage.clientWidth, h: stage.clientHeight },
+      inspector: {
+        open: insp.classList.contains("open"),
+        position,
+        sections,
+        chars: insp.textContent.trim().length,
+        overlapsStage: position !== "static" && shown &&
+          ir.left < sr.right && ir.right > sr.left && ir.top < sr.bottom && ir.bottom > sr.top,
+      },
+      graph: { nodes: m ? m.nodes.length : 0, edges: m ? m.edges.length : 0, offscreen },
+      buckets,
+      colours: { node: paintOf(nodeEl), chip: paintOf(chipEl) },
+    };
+  };
+
   // ---- behaviours --------------------------------------------------------
   const OPEN_CUE = `<span style="margin-left:auto;color:var(--acc)">open ›</span>`;
   function renderCards() {
