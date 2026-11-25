@@ -4,7 +4,7 @@ The exact wording of each mode, in the same names `SKILL.md` uses. The gates are
 
 ## propose
 
-**Before writing anything**, search the repo and then say what you found.
+**Before writing anything**, search the repo and then say what you found. Check the gate too: which command `make test`/CI actually runs, and whether the test tree that would prove these behaviours is inside it — a proof tree outside the gate is decoration, so surface the gap as a convention or an Open Question instead of citing the tests as if they ran.
 
 ```
 ASSUMPTIONS
@@ -100,7 +100,7 @@ Per behaviour:
 
 1. `spec_tests.py --only BEH-004` → skeleton.
 2. Turn the skeleton into a real test, named the way the repo names tests.
-3. Link it: `spec_link.py --apply` proposes candidates; confirm the diff, then write.
+3. Link it: `spec_link.py --apply` proposes candidates; confirm the diff, then write. When plain `pytest --collect-only -q` collects nothing, pass the repo's runner via `--collect` (e.g. `--collect "uv run --project backend pytest <paths> --collect-only -q"`). Node ids come back relative to the **pytest rootdir**, not repo root: `tests:` links carry exactly the prefix pytest prints while `refs:` paths stay repo-root relative — a wrong prefix shows as `moved` in `--check`. Open each candidate before linking: name matching suggests lookalikes, and a candidate whose name names a different field asserts that field.
 4. Run it. Watch it fail for the intended reason.
 5. Minimal implementation. Run the whole suite.
 6. Mark `status: implemented` in the YAML, re-render, next behaviour.
@@ -114,6 +114,8 @@ python $SKILL/scripts/spec_verify.py .specs/order-lifecycle/spec.yaml --render
 ```
 
 Report the table, not adjectives.
+
+To mark the graph from an existing JUnit file instead of running the suite (CI artifact, fixture), use `--no-run --junit <path>`: the verifier skips the test command, maps the file onto the behaviours and still writes `results.json`.
 
 ```
 ✓ BEH-001 pass   2 tests

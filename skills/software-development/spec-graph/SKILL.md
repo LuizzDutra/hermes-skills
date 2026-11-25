@@ -1,7 +1,7 @@
 ---
 name: spec-graph
 description: "Behaviour specs as YAML + reviewable graph, before code."
-version: 1.4.1
+version: 1.4.2
 author: Hermes Agent
 license: MIT
 platforms: [linux, macos, windows]
@@ -106,7 +106,7 @@ Exit codes, because "it printed something" is not a result:
 
 **Working on the scripts.** They are stdlib-only on purpose (no PyYAML, no pytest import): exercise them with a bare interpreter — `python spec_lint.py --help` — not only with the repo's venv, or an accidental third-party import goes unnoticed. Never call `subprocess` directly to run a repo command: use `run_command()` from `spec_model.py`, which repairs the executable token on Windows (cmd.exe reads `.venv/Scripts/python.exe` as switches) and decodes child output as bytes. Read `references/renderer.md` before touching `graph.html`.
 
-**Mirror edits into the skills repo.** The profile copy is what runs; the source of truth is the repo the skill was installed from — resolve it from the skill directory (`git -C <skill_dir> rev-parse --show-toplevel`, or the repo that contains it), never from a hardcoded path. After a batch of edits copy every changed file across, prove parity with `diff -rq --exclude=__pycache__` between the two trees, and commit; the user pushes. An edit left only in the profile is overwritten by the next install.
+**Mirror edits into the skills repo.** The profile copy is what runs; the source of truth is the repo the skill was installed from — resolve it from the skill directory (`git -C <skill_dir> rev-parse --show-toplevel`, or the repo that contains it), never from a hardcoded path. After a batch of edits copy every changed file across, prove parity with `diff -rq --exclude=__pycache__` between the two trees, and commit; the user pushes. An edit left only in the profile is overwritten by the next install. Diff the two trees **before** committing: parallel sessions mirror profile edits into the repo under their own commits, and a commit that only re-copies already-mirrored files comes back `nothing to commit` — the parity diff tells you whether anything is still yours to commit.
 
 ## Hard rules
 
