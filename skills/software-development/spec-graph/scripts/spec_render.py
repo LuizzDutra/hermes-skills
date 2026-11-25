@@ -1036,7 +1036,10 @@ TEMPLATE = r"""<!DOCTYPE html>
     let bbox = { width: 0 };
     try { if (view.getBBox) bbox = view.getBBox(); } catch (e) { /* empty <g> */ }
     const need = Math.round(bbox.width * vt.k);
-    const have = stage.clientWidth - 48;
+    // A page with no graph (micro tier, or the Behaviours tab hiding the stage)
+    // reports w: 0; clamping keeps `have` from going negative and telling the
+    // reader about a measurement that never happened.
+    const have = Math.max(0, stage.clientWidth - 48);
 
     // panel / click — a closed panel is display:none, so it measures 0×0 and
     // cannot overlap the stage.

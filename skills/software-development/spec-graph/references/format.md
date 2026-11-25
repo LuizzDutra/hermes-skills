@@ -95,6 +95,21 @@ flow:
 
 `next` may be a list (branching). Steps are referenced from `behaviour.transition` the same way transitions are, and a step with no behaviour gets the same warning as an uncovered transition. Every step needs an incoming `next:` from somewhere: an orphan lands in the last column and widens the whole graph past what the frame can hold (see the review surface in `SKILL.md`).
 
+## Delta specs
+
+A behaviour change to code that already shipped gets its own file, `.specs/<capability>/delta-<change>.yaml`, and the shipped `spec.yaml` is not edited until the change lands. A delta carries the shared top-level fields plus four of its own.
+
+| field | type | notes |
+|---|---|---|
+| `delta_of` | string | the capability id this delta amends; the renderer keys on it to stop reporting absent behaviours as removed |
+| `current` | string | what happens today, observably — the sentence a reviewer checks against the running system |
+| `new` | string | what must happen after the change |
+| `must_not_change` | list | `BEH-NNN` ids from the main spec that this change must leave alone; they are deliberately absent from the delta |
+
+`delta_of` is the only delta-specific thing the tooling reads: `spec_lint.py` validates the file as an ordinary behaviour spec and does not need the parent to exist, and only `spec_render.py --diff` reads the parent — an id present in both files with different content rings as changed, an id only in the delta rings as added, and nothing rings as removed. A modified behaviour therefore keeps the id it shipped with, and a genuinely new operation takes a new id.
+
+Render it to its own file with `--out` in the same directory, or the default output overwrites `graph.html`. Folding: merge the behaviours into the main spec, bump that spec's `version` to the number the delta carries, and delete the delta. Start from `templates/delta.spec.yaml`; the wording of the mode is in `references/workflows.md`.
+
 ## Refactor plans (`kind: refactor`)
 
 A refactor must not change observable behaviour, so the test suite is the contract and writing scenarios for it would only mirror the tests. The plan states the structural target, the steps and the evidence instead.
