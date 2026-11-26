@@ -1,7 +1,7 @@
 ---
 name: comment-hygiene
 description: "Use when writing or cleaning comments and docstrings."
-version: 2.1.0
+version: 2.2.0
 author: Hermes Agent
 license: MIT
 metadata:
@@ -46,7 +46,13 @@ comentário: é recado.
 - O *porquê*, o invariante, o risco evitado, a ordem que importa, unidades, a
   tolerância a dados legados, a regra de segurança/redação.
 - ADR do repositório quando ele explica a decisão (`docs/adr/ADR-0002-*.md`): o ADR
-  sobrevive ao branch, o plano não.
+  sobrevive ao branch, o plano não. Confira que o arquivo citado existe no repositório antes de
+  citar: referência a documento externo ou inexistente (ADR de outro repo, `Proposta §9.1`,
+  `README §11`) é resquício — troque a citação pela razão que ela tentava carregar.
+- Resquício herdado também conta: ao editar um arquivo que a sessão não escreveu, passe
+  o olho pelos comentários dele atrás de citação morta (`grep -nE 'ADR-[0-9]+|§[0-9]+'
+  <arquivo>`). O gate de `--staged` vê só linhas adicionadas de propósito — o resquício
+  pré-existente atravessa todos os gates até alguém ler o arquivo.
 - Docstring de contrato é texto publicado: handler `@router.<verbo>` e classe
   `BaseModel` vão para o OpenAPI. Escreva para o consumidor da API — comportamento,
   parâmetros, erros — sem jargão interno e sem processo.
