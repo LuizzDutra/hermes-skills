@@ -40,6 +40,12 @@ A step too large for one turn splits across two subagents, with the gate kept by
 2. The owner validates, then an **execution subagent** commits one sub-step at a time, each green under the repo's own gate before the commit, staged by explicit path only.
 3. **Only the parent flips `status: done`**, after re-running the check itself — a child's self-report is not evidence. Re-derive the child's headline numbers from the repo (collected test count, the gate command's tail, coverage from the report file) before quoting them. When the re-derivation disagrees with the child's figure, write the **measured** value into the step's `note` and say which number moved: the child's figure is a claim, the file on disk is the fact. Never leave the prettier of the two in the plan. Re-run `spec_checks.py --render` after the flip.
 
+When the step closes a behaviour, the executor's brief carries the spec checkpoint as a deliverable:
+flip that behaviour to `implemented`, fill its `tests:` with the new test ids, re-check every `refs:`
+entry — leaving the spec's `version` and `status` alone — and the parent re-proves it with
+`spec_verify.py --render`, which re-runs the suite and repaints the graph, before quoting the
+checkpoint to the user.
+
 A child that "completes" by deleting a failing test is caught by the assert-count diff, not by reading its summary.
 
 ## A check run races a worker mid-edit

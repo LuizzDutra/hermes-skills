@@ -1,7 +1,7 @@
 ---
 name: spec-graph
 description: "Behaviour specs as YAML + reviewable graph, before code."
-version: 1.4.5
+version: 1.7.0
 author: Hermes Agent
 license: MIT
 platforms: [linux, macos, windows]
@@ -70,6 +70,29 @@ One row per mode; the exact wording, the ASSUMPTIONS/OPEN QUESTIONS blocks and t
 
 The refactor mode is where plans go wrong in practice — read `references/refactor-playbook.md` before the second step of any plan bigger than a couple of files.
 
+**Amending an approved spec in place is not the `amend` mode** (that one is a delta spec for shipped
+behaviour). When the user answers open questions or corrects a spec that is already `approved`:
+apply each answer point-by-point (they often arrive as terse numbered replies — map every number to
+the question it answers instead of re-asking), bump the spec `version`, keep `status: approved`
+(never demote a spec because of its own amendment), re-lint, re-render, preview again, then
+summarise field by field what changed. Batch related edits into one version bump, not one per turn.
+
+Two amendments need more than that bump:
+
+- **A substantive amendment — new or rewritten behaviours that still need implementing — reopens
+  the gate.** Demote the top-level `status` and the touched behaviours to `proposed` (untouched
+  implemented behaviours keep their status), re-lint, re-render, and stop for a fresh approval
+  before dispatching any implementation. An owner who must live with the changed behaviour expects
+  to re-approve it, not inherit it.
+- **When an approved change makes a sibling scenario's `then` false, fix that scenario in the same
+  version bump and disclose the edit by name.** A stale observable fails every later verify, and a
+  silent edit to an approved spec is self-approval.
+
+If a step's implementation is delegated, the child flips only its step's behaviours to
+`implemented`; the top-level `version` and `status` are the parent's, and every brief says so — a
+plan whose closing step says "set the spec to implemented" produces a child that approves its own
+work.
+
 ## Artifacts
 
 ```
@@ -79,6 +102,20 @@ The refactor mode is where plans go wrong in practice — read `references/refac
   results.json   # generated: test evidence (do not commit)
   checks.json    # generated: refactor checks (do not commit)
 ```
+
+A plan document the user asked for (e.g. `plano.md`) lives next to the spec: ordered steps, each
+ending with a spec checkpoint (update the YAML and re-lint whenever a step moves refs or statuses).
+It follows the same shipping rules as the spec — it goes only where the spec goes.
+
+A step that changes a behaviour also rewrites every surface that *describes* it (runbook section,
+UI copy) — but only in that step: while it is pending, leave the prose alone, because it must keep
+describing what the code does today, and text rewritten early lies about the running system. When a
+surface is frozen (a frontend under freeze, a generated file owned by another pipeline), record the
+freeze as a plan restriction and repeat it in every implementer's brief — the plan must not promise
+edits the codebase will not accept, and stale prose on a frozen surface is routing information for a
+later step, not an error to fix now. And a
+finding from verifying a step goes into the plan's risk section with enough context for the step
+that will act on it — never fixed silently out of scope, never left only in chat.
 
 **Commit `spec.yaml`, and nothing else.** It is the decision a reviewer needs; everything next to it is rebuilt by the scripts, so the three generated files go in `.gitignore`.
 
@@ -151,7 +188,10 @@ The HTML is self-contained (no CDN) and adapts to the frame.
 | A test with no behaviour link | `spec_link.py` suggests the node id; the graph shows it amber until confirmed |
 | Refs copied from a sibling spec | Old specs rot after a repo restructure (stale paths fail lint in bulk) — read them for field shape and tone, and take every path and symbol from a file opened this session |
 | "Implemented" with no tests | It is `untested`; the claim needs a run and a linked test |
-| Everything green before any test ran | Without `results.json` every claim is teal; green is earned by a run |
+| "Everything green before any test ran" | Without `results.json` every claim is teal; green is earned by a run |
+| A precedence rule ("X prevalece sobre Y, o usuário não pode atropelar") lives only in prose the prompt carries | Enforcement is an invariant plus an observable `then` ("the revision does not replace the confirmed spec"); prose inside generated text is not a guarantee |
+| A plan or spec quotes a size or budget number | Measure it from the artifact (`wc -m`, script output) after the last edit; an estimate drifts from the file and misleads every implementer |
+| A plan step's Red expectation quotes a concrete number | Re-derive it from the constants before executing or dispatching; a literal executor ships the plan's wrong number as green tests |
 | A graph that clips or looks dense at 960px | It pans and refits. Reshaping the spec for the picture changes the system being specified |
 
 ## Verification checklist

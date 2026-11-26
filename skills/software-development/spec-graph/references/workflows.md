@@ -6,6 +6,8 @@ The exact wording of each mode, in the same names `SKILL.md` uses. The gates are
 
 **Before writing anything**, search the repo and then say what you found. Check the gate too: which command the repo's own gate actually runs (its documented test command, its task-runner target or its CI job), and whether the test tree that would prove these behaviours is inside it — a proof tree outside the gate is decoration, so surface the gap as a convention or an Open Question instead of citing the tests as if they ran.
 
+**A behaviour that asserts a runtime mechanism is measured, not assumed.** When a `then` depends on what a dependency does with your content — which message role carries it, which event fires, what a hook receives — run a minimal probe against the installed version from a scratch dir before proposing the behaviour: source reading confirms shape, only execution confirms behaviour, and a wrong mechanism collapses the design at implementation. Record the measured mechanism in a context note so review sees evidence, not inference.
+
 ```
 ASSUMPTIONS
 1. Python service, pytest, no framework — inferred from pyproject.toml and tests/
@@ -154,6 +156,9 @@ The hard-won lessons of running a plan — placeholder checks at completion, con
 - One `::preview{file="..."}` line per reply, and no screenshot of your own render. Fit and colour comparisons belong to whoever edits the renderer (`renderer.md`), not to a spec review.
 - Two or three sentences: what changed, what needs a decision.
 - Number the open questions; the user answers "1 yes, 2 email only" in one line.
+- **An answer is not an approval.** A reply that answers the open questions or corrects the draft keeps the spec `proposed`: apply the answers as one coordinated patch pass, re-lint, re-render, re-preview, and stop again. Only an explicit approval starts implementation.
+- **Route each answer to the construct it is.** A standing numeric rule becomes an invariant with the numbers verbatim — a cap inside a behaviour's `then` reads as one scenario's property, not a system rule; the mechanism or the why becomes a context note; a new case becomes a scenario under the behaviour it modifies; the seam that will carry the change becomes a ref — open the file and cite a symbol that exists today, never one the change only plans to add.
+- **Report the blast radius on implemented behaviour.** Lint validates refs, not conflicts: when a proposal contradicts a behaviour marked `implemented`, the stop-again block names that behaviour, the linked tests that will need rewriting, and any repo doc section that tracks the old behaviour — approval should carry the true cost.
 - Never paste the whole YAML into chat. Point at ids.
 - If the user edits `spec.yaml` by hand, re-run lint and render before replying — their edit is the new source of truth, including when it breaks a rule.
 
