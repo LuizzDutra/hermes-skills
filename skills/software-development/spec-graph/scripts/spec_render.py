@@ -160,6 +160,7 @@ TEMPLATE = r"""<!DOCTYPE html>
   .legend i{display:inline-block;width:11px;height:9px;border-radius:3px;margin-right:5px;vertical-align:middle}
   .legend span{white-space:nowrap}
   #body-beh,#body-scen,#body-trace,#body-table{flex:1;min-width:0}
+  .tracewrap{overflow:auto;max-height:620px;border:1px solid var(--bd);border-radius:12px}
   #inspector{flex:0 0 320px;width:320px;max-height:700px;overflow:auto;
     border:1px solid var(--bd);border-radius:12px;background:var(--card);
     padding:14px;display:none}
@@ -1164,7 +1165,7 @@ TEMPLATE = r"""<!DOCTYPE html>
       files.get(r.path).behs.push(b.id);
       if (r.ok === false) files.get(r.path).bad = true;
     }));
-    const W = box.clientWidth || 700, H = 560;
+    const W = box.clientWidth || 700;
     // wider gutters than the old 0.36/0.70 columns: the connector lines need room
     const BX = 40, BW = W * 0.27;
     const TX = W * 0.45, TW = W * 0.27;
@@ -1172,14 +1173,25 @@ TEMPLATE = r"""<!DOCTYPE html>
     const bChars = Math.max(14, Math.floor((BW - 60) / 6.1));
     const tChars = Math.max(16, Math.floor((TW - 28) / 5.6));
     const fChars = Math.max(12, Math.floor((FW - 18) / 5.6));
-    const svgT = `<svg viewBox="0 0 ${W} ${H}" style="width:100%;height:${H}px;display:block">
+    const bH = 30, tH = 26, fH = 24;
+    const TOP = 40, bRow = 42, tRow = 38, fRow = 38;
+    // The viewBox height follows the longest column, not a fixed stage: rows
+    // past a fixed height are not clipped by CSS, they are never drawn, so the
+    // trace looks complete while its last tests and files are missing. The
+    // wrapper scrolls once the column is taller than its max-height.
+    const bottom = Math.max(
+      TOP + Math.max(0, DATA.behaviours.length - 1) * bRow + bH / 2,
+      TOP + Math.max(0, tests.size - 1) * tRow + tH / 2,
+      TOP + Math.max(0, files.size - 1) * fRow + fH / 2);
+    const H = Math.max(560, Math.ceil(bottom + 24));
+    const svgT = `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMinYMin meet"
+      style="width:100%;height:${H}px;display:block">
       <defs><marker id="tarrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto">
         <path d="M0 0 L10 5 L0 10 z" fill="${MUTED}"/></marker></defs>`;
-    const bH = 30, tH = 26, fH = 24;
     const bY = new Map(), tY = new Map(), fY = new Map();
-    DATA.behaviours.forEach((b, i) => bY.set(b.id, 40 + i * 42));
-    [...tests.keys()].forEach((t, i) => tY.set(t, 40 + i * 38));
-    [...files.keys()].forEach((f, i) => fY.set(f, 40 + i * 38));
+    DATA.behaviours.forEach((b, i) => bY.set(b.id, TOP + i * bRow));
+    [...tests.keys()].forEach((t, i) => tY.set(t, TOP + i * tRow));
+    [...files.keys()].forEach((f, i) => fY.set(f, TOP + i * fRow));
     let edges = "", nodes = "";
     DATA.behaviours.forEach(b => {
       const y = bY.get(b.id);
@@ -1222,7 +1234,7 @@ TEMPLATE = r"""<!DOCTYPE html>
     box.innerHTML = `<div style="display:flex;gap:16px;align-items:baseline;margin-bottom:6px">
         <span class="tip">behaviours → tests → cited files</span>
         <span class="tip">${orphans} behaviour(s) without a test</span></div>
-      <div style="overflow:auto;border:1px solid var(--bd);border-radius:12px">
+      <div class="tracewrap">
         ${svgT}${edges}${nodes}</svg></div>`;
   }
 

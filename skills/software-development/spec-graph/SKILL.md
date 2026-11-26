@@ -1,7 +1,7 @@
 ---
 name: spec-graph
 description: "Behaviour specs as YAML + reviewable graph, before code."
-version: 1.4.2
+version: 1.4.5
 author: Hermes Agent
 license: MIT
 platforms: [linux, macos, windows]
@@ -106,7 +106,7 @@ Exit codes, because "it printed something" is not a result:
 
 **Working on the scripts.** They are stdlib-only on purpose (no PyYAML, no pytest import): exercise them with a bare interpreter — `python spec_lint.py --help` — not only with the repo's venv, or an accidental third-party import goes unnoticed. Never call `subprocess` directly to run a repo command: use `run_command()` from `spec_model.py`, which repairs the executable token on Windows (cmd.exe reads `.venv/Scripts/python.exe` as switches) and decodes child output as bytes. Read `references/renderer.md` before touching `graph.html`.
 
-**Mirror edits into the skills repo.** The profile copy is what runs; the source of truth is the repo the skill was installed from — resolve it from the skill directory (`git -C <skill_dir> rev-parse --show-toplevel`, or the repo that contains it), never from a hardcoded path. After a batch of edits copy every changed file across, prove parity with `diff -rq --exclude=__pycache__` between the two trees, and commit; the user pushes. An edit left only in the profile is overwritten by the next install. Diff the two trees **before** committing: parallel sessions mirror profile edits into the repo under their own commits, and a commit that only re-copies already-mirrored files comes back `nothing to commit` — the parity diff tells you whether anything is still yours to commit.
+**Mirror edits into the repo the skill was installed from.** The profile copy is what runs; the installed tree is the source of truth — resolve that repo from the skill directory (`git -C <skill_dir> rev-parse --show-toplevel`, or the repo that contains it), never from a hardcoded path. After a batch of edits copy every changed file across, prove parity with `diff -rq --exclude=__pycache__` between the two trees, and commit; leave the push to the user. An edit left only in the profile is overwritten by the next install. Diff the two trees **before** committing: parallel sessions mirror profile edits into the repo under their own commits, and a commit that only re-copies already-mirrored files comes back `nothing to commit` — the parity diff tells you whether anything is still yours to commit.
 
 ## Hard rules
 
@@ -149,6 +149,7 @@ The HTML is self-contained (no CDN) and adapts to the frame.
 | "I'll add the error cases later" | They are behaviours; add them now or list them as out of scope |
 | Spec and code both changed in the same turn | The review gate was skipped; revert to spec-only |
 | A test with no behaviour link | `spec_link.py` suggests the node id; the graph shows it amber until confirmed |
+| Refs copied from a sibling spec | Old specs rot after a repo restructure (stale paths fail lint in bulk) — read them for field shape and tone, and take every path and symbol from a file opened this session |
 | "Implemented" with no tests | It is `untested`; the claim needs a run and a linked test |
 | Everything green before any test ran | Without `results.json` every claim is teal; green is earned by a run |
 | A graph that clips or looks dense at 960px | It pans and refits. Reshaping the spec for the picture changes the system being specified |
