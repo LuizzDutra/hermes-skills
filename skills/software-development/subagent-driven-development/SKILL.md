@@ -1,7 +1,7 @@
 ---
 name: subagent-driven-development
 description: Use when executing a plan via delegated subagents.
-version: 1.1.0
+version: 1.4.0
 author: Hermes Agent
 license: MIT
 metadata:
@@ -74,6 +74,20 @@ When the user asks for a plan "to validate" before execution, the accept is a ha
 - A defect found while reviewing your own plan (import cycle, dependency inverted in the commit
   order) is fixed in the plan file and disclosed at presentation — never dispatched as-is.
 
+### Step-gated rounds (user-gated)
+
+When the user approves a plan and wants to review each step before it ships, the cadence is one step
+per dispatch:
+
+- Dispatch steps strictly sequentially, one per round: the next step's brief depends on what the
+  previous one actually landed, not on what the plan predicted it would land.
+- After each dispatch re-measure yourself — targeted tests, full suite, lint, the plan's verify
+  command — and present the checkpoint (exact counts, spec/behaviour status, files changed). Commit
+  and dispatch the next step only after the user's go; the per-step commit is the review unit.
+- Fence the brief on both file sets and plan steps: name the neighbouring steps that are out of
+  scope and why. A child told to implement step N may otherwise "helpfully" execute its cleanup —
+  e.g. removing a duplicated prompt block the plan keeps until a later step on purpose.
+
 ## Rules
 
 - **Children never run git in parallel.** Parallel children race the index, and serialized commits keep the history and the messages yours. A single serialized execution child may commit its own sub-steps (one green commit at a time, staged by explicit path — the spec-graph Mode 6 shape); the parent still verifies every commit before quoting it. Checkout, stash and rebase are never a child's job.
@@ -95,6 +109,11 @@ When the user asks for a plan "to validate" before execution, the accept is a ha
   confirm the suite fails before accepting the phase. New contract tests (secret non-leak, import
   boundary, status mapping) get the same proof: apply the exact flaw they claim to catch — zero the
   key, add the forbidden import — and confirm they fail before trusting them.
+  Match the probe to the phase type. A phase that packages a document or constant into code gets a
+  byte-identity diff against the source artifact — a length check alone hides a truncated copy. A
+  phase that moves or renames a symbol gets a tree-wide grep for the OLD name, and that includes the
+  spec/plan docs, not just the source tree: comments, test doubles and spec `refs:` outlive the code
+  that moved.
 - **Resolve conflicting state claims against the source of truth, not plausibility.** When a child
   reports a repo state that contradicts the parent's own snapshot (ahead-count, origin position),
   don't pick a winner by plausibility — `git reflog show origin/<branch>` names the ref's source
@@ -121,6 +140,12 @@ When the user asks for a plan "to validate" before execution, the accept is a ha
 
 - Dispatching phase N+1 in the same call as phase N: the child starts before the contract exists and
   invents it. Dependencies are rounds, not fan-out.
+- Re-derive every concrete expectation in a plan step from the constants before dispatching: a child
+  implements the plan's Red values literally, so a wrong boundary number ships as green tests of the
+  wrong value — the child reconciles by bending the code to the plan instead of questioning it. When
+  a child reports the plan itself as inconsistent, arbitrate plan-vs-code yourself: fix the plan file
+  AND the implementation together and record it in the checkpoint. Accepting the child's silent
+  workaround leaves the plan wrong for the next reader.
 - In a move-refactor, sequence the commits home-before-consumer and walk each intermediate state:
   a plan that moves a consumer before its new home exists bakes an import cycle into the sequence,
   and it only surfaces when the child executes it, not when you read the prose.

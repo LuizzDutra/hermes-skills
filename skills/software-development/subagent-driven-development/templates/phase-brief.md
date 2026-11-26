@@ -31,6 +31,11 @@ follow them exactly.
 TDD: write the test, run it, confirm the failure mode matches what was promised (`ModuleNotFoundError`,
 `AttributeError`, an assertion), then implement the minimum, then run again.
 
+## Spec checkpoint (only when the plan carries a behaviour spec)
+
+Flip to `implemented` only the behaviours this phase lands, with their linked tests. The spec's
+top-level `version` and `status` are not yours to change — approval lives with the parent.
+
 ## Verify
 
 1. `<command>` → `<expected output>`
@@ -39,6 +44,8 @@ TDD: write the test, run it, confirm the failure mode matches what was promised 
 
 ## Report
 
-Files created/modified; the tail of each command; every deviation from the plan with the reason. If
+Files created/modified; the tail of each command with the exact counts (`37 passed`, `0 failed`) — a
+bare "green" is not a measurement; every deviation from the plan with the reason. If
 the suite is expected to be red at this point, send a table of test → exception type →
-expected/unexpected.
+expected/unexpected. A contradiction between plan and code — a wrong boundary number, a missing
+symbol — is reported, never reconciled silently by bending the code to the plan.
