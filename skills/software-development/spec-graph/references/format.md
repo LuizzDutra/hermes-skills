@@ -95,6 +95,8 @@ flow:
 
 `next` may be a list (branching). Steps are referenced from `behaviour.transition` the same way transitions are, and a step with no behaviour gets the same warning as an uncovered transition. A step that nothing points at only costs a column in the picture — it lands in the last layer and widens the drawing, which the user pans. That is a layout detail, not a spec defect: do not invent a `next:` link to tidy the graph.
 
+A `next:` list may point backwards: the layered layout is bounded, so a re-evaluation loop (an answers step and a re-evaluation step each listing the other) renders as a back edge. Model the loop as that step pair instead of flattening it into one step's prose — the cycle is the behaviour.
+
 ## Delta specs
 
 A behaviour change to code that already shipped gets its own file, `.specs/<capability>/delta-<change>.yaml`, and the shipped `spec.yaml` is not edited until the change lands. A delta carries the shared top-level fields plus four of its own.
@@ -188,6 +190,8 @@ draft ──▶ proposed ──▶ approved ──▶ implemented
 
 Only a human moves a spec to `approved`. `spec_verify.py` never edits the file: it reports pass/fail and the graph paints the difference. `divergent` is the case where the spec was approved and the code does something else — decide *with the user* whether the spec or the code is wrong.
 
+A spec can be born `proposed` while describing behaviour that already ships — a flow of the current request path plus a new feature, for instance. Mark the shipped behaviours `implemented` with their linked tests (teal until a run is recorded) and only the genuinely new ones `proposed`; the spec-level status stays `proposed` until the human approves.
+
 The graph paints four buckets, not six: `implemented` (teal without a test run, green with one), `untested`, `proposed`, `failing`. `approved` folds into `untested` — agreed and not built is untested, and a separate bucket told the reviewer nothing — while `draft` and `divergent` keep their own colours but stay out of the legend. Palette details belong to `references/renderer.md`.
 
 ## References
@@ -206,7 +210,7 @@ refs:
 
 ## Linking tests
 
-`link_style: explicit` (the default) keeps the spec's vocabulary out of the repo: tests are named the way the project already names them, and the mapping lives here, on the behaviour.
+`link_style: explicit` (the default) keeps the spec's vocabulary out of the repo: tests are named the way the project already names them, and the mapping lives here, on the behaviour. When writing links by hand, harvest the exact ids by grepping the test tree for `def test_` — a name guessed from memory is a stale id waiting for `spec_link.py --check` to flag.
 
 ```yaml
 tests:

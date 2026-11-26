@@ -4,7 +4,7 @@ The exact wording of each mode, in the same names `SKILL.md` uses. The gates are
 
 ## propose
 
-**Before writing anything**, search the repo and then say what you found. Check the gate too: which command `make test`/CI actually runs, and whether the test tree that would prove these behaviours is inside it — a proof tree outside the gate is decoration, so surface the gap as a convention or an Open Question instead of citing the tests as if they ran.
+**Before writing anything**, search the repo and then say what you found. Check the gate too: which command the repo's own gate actually runs (its documented test command, its task-runner target or its CI job), and whether the test tree that would prove these behaviours is inside it — a proof tree outside the gate is decoration, so surface the gap as a convention or an Open Question instead of citing the tests as if they ran.
 
 ```
 ASSUMPTIONS
@@ -100,7 +100,7 @@ Per behaviour:
 
 1. `spec_tests.py --only BEH-004` → skeleton.
 2. Turn the skeleton into a real test, named the way the repo names tests.
-3. Link it: `spec_link.py --apply` proposes candidates; confirm the diff, then write. When plain `pytest --collect-only -q` collects nothing, pass the repo's runner via `--collect` (e.g. `--collect "uv run --project backend pytest <paths> --collect-only -q"`). Node ids come back relative to the **pytest rootdir**, not repo root: `tests:` links carry exactly the prefix pytest prints while `refs:` paths stay repo-root relative — a wrong prefix shows as `moved` in `--check`. Open each candidate before linking: name matching suggests lookalikes, and a candidate whose name names a different field asserts that field.
+3. Link it: `spec_link.py --apply` proposes candidates; confirm the diff, then write. When plain `pytest --collect-only -q` collects nothing, pass the repo's runner via `--collect`, substituting the repo's own invocation (workspace package manager, `cd <dir> &&`, container exec) for the bare `pytest`: `--collect "<runner> pytest <paths> --collect-only -q"`. Node ids come back relative to the **pytest rootdir**, not repo root: `tests:` links carry exactly the prefix pytest prints while `refs:` paths stay repo-root relative — a wrong prefix shows as `moved` in `--check`. Open each candidate before linking: name matching suggests lookalikes, and a candidate whose name names a different field asserts that field.
 4. Run it. Watch it fail for the intended reason.
 5. Minimal implementation. Run the whole suite.
 6. Mark `status: implemented` in the YAML, re-render, next behaviour.
