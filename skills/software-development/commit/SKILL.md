@@ -1,7 +1,7 @@
 ---
 name: commit
 description: "Use when committing: Conventional Commits, pt-BR body."
-version: 1.3.0
+version: 1.3.1
 author: LuizzDutra (ported from the OpenCode config skill of the same name)
 license: MIT
 platforms: [linux, macos, windows]
@@ -103,8 +103,10 @@ passar. O hook bloqueia por basename em qualquer ferramenta.
   file and pass `-F`, so pt-BR text survives shell quoting. `git push --force` is hard-denied in this profile's
   `approvals.deny` — do not attempt it; report it instead.
 - Run the repository's own checks before committing when they are cheap
-  (tests, lint, build). For anything larger, load `requesting-code-review`
-  instead of improvising a verification pass.
+  (tests, lint, build) — the FULL gate command, never the subset you believe you touched:
+  lint scope covers paths outside the edited files (scripts/, generated docs), and a violation
+  there, e.g. a long `help=` string, leaves HEAD red for the next session. For anything larger,
+  load `requesting-code-review` instead of improvising a verification pass.
 - New comments and docstrings follow `comment-hygiene`: no plan, step, check or
   commit reference — state the fact or delete the sentence. The history of how
   the code got here belongs to the message and the ADR, not to the code.
