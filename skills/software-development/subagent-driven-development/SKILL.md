@@ -1,7 +1,7 @@
 ---
 name: subagent-driven-development
-description: Use when executing a plan via delegated subagents.
-version: 1.4.0
+description: "Execute plans or run review rounds via delegated subagents."
+version: 1.5.0
 author: Hermes Agent
 license: MIT
 metadata:
@@ -21,8 +21,10 @@ files, a mechanical migration, long test runs.
 ## Procedure
 
 1. **Pre-flight yourself, before dispatching anything.** Branch, clean tree, one baseline run of the
-   suite. Record the count and the last commit: without a baseline, no later "expected failure" is
-   provable.
+   suite — and every other gate the checkpoint will quote, lint included, not just the tests: a
+   gate left red by the parent's own last commit forces the child into an out-of-scope fix to make
+   its gates green. Record the counts and the last commit: without a baseline, no later "expected
+   failure" is provable.
 2. **Turn the plan into rounds.** A round is the set of phases whose file sets are disjoint.
    Everything else is sequential. Typical software shape: contract → (vendor implementation ∥ fake
    implementation) → composition root → test migration → boundary tests.
@@ -32,7 +34,16 @@ files, a mechanical migration, long test runs.
 4. **Paste exact code for mechanical artifacts** — a fake, a signature, a dataclass. Composed from a
    prose description, children produce a variant you then have to debug.
 5. **Decide the ambiguities in the brief.** Children cannot ask questions. Where the plan is wrong,
-   pick the option and state why, so the deviation is a decision instead of a surprise.
+   pick the option and state why, so the deviation is a decision instead of a surprise. Give the
+   report schema a `warnings` field and require out-of-scope edits to land there: a self-declared
+   fix ("lint was red at HEAD; I wrapped a help string to close the gate") can be adjudicated in
+   seconds, an undeclared one hides in the diff until review. Adjudicate every warning before
+   the next dispatch: a gap in a file another phase owns becomes a binding task in the owning
+   phase's brief — a fail-closed fix silently disables the sibling feature in production while
+   every test stays green. When the gap is a two-line cross-cutting fix spanning several
+   phases' file sets, apply it yourself between rounds and declare it in the checkpoint
+   instead of re-dispatching: no single child owns the file set, and a dispatch costs more
+   than the edit.
 6. **Between rounds: verify, then commit.** Re-run the suite, read the diff, run the boundary
    checks, commit the phase yourself with the message you chose. When the plan file doubles as
    the user's tracking surface, update its status column with the commit SHAs in the same pass —
@@ -58,6 +69,37 @@ is look-then-fix, not loop:
   silent divergences hide; reading the new code in isolation reads as correct by construction.
 - Children inherit the parent model by default. A distinct reviewer model requires a pin in
   the delegation config — check that the profile carries it before promising a model switch.
+
+### Branch-wide review by parallel specialists
+
+"Review what this branch implemented" is a tree review, not a staged-diff one, and it
+parallelizes by concern, not by file:
+
+- Measure the baseline yourself first (full suite, lint, coverage, wall-time) and put the measured
+  numbers in every brief — reviewer findings and mutation scores are meaningless against an
+  unverified reference.
+- Skim the README and module docstrings before writing briefs: the brief carries the module map,
+  the enforced boundaries (contract/layer tests) and the intent of the recent commits, so reviewers
+  spend their budget on findings instead of re-deriving the architecture.
+- One reviewer per concern with non-overlapping scopes — structure / feature behavior / test
+  quality (mutation + prune) — and each brief ends with an explicit non-scope line naming the
+  sibling reviewer. Overlapping briefs come back with duplicate findings to dedupe by hand.
+- Hand every reviewer the same severity rubric in the user's language (pt-BR here: alta = bug on a
+  real path, broken boundary, security; média = fragility, unhandled edge case, test coupled to
+  implementation; baixa = style/doc/comment) — without a shared rubric the consolidated labels
+  don't compare. Fix the deliverable too: full markdown report at a scratch path, findings returned
+  through an output_schema (severity, file, line, evidence, impact, recommendation) so the parent
+  validates and assembles instead of trusting prose.
+- Require proof per finding: file:line plus an execution or an unambiguous code reading — "looks
+  wrong" without evidence does not enter the report. Behavior reviewers experiment on a scratch
+  copy; nobody edits the original.
+- Script the mutant driver instead of running a whole-suite mutator: one full-suite run per mutant
+  multiplies suite time by the mutant count. A table of (file, old, new, targeted test selector),
+  replace demanding exactly one occurrence, `pytest <selector> -x -q --no-cov` with a per-mutant
+  timeout, restore in try/finally, hash-verify every touched file at the end, cap total time and
+  report what actually ran.
+- Prune-tests inside a review round is audit-only: candidates with file:line, category and reason,
+  nothing deleted — fixes wait for the user's confirmation like every other finding.
 
 ### Plan-execute rounds (user-gated)
 
@@ -101,7 +143,9 @@ per dispatch:
 - **When the tree must be red during a phase, ask for a classification table**: test, exception
   type, expected/unexpected. "34 failed, 32 passed" proves nothing on its own.
 - **Verify self-reports.** A child's "185 passed" may be its own file only. Re-run the suite; check
-  `git diff <tests> | grep -c '^-.*assert'` to catch weakened tests; run the boundary greps yourself.
+  `git diff <tests> | grep -c '^-.*assert'` to catch weakened tests; run the boundary greps
+  yourself; scope a diff against the pre-round base over the forbidden paths — the "don't touch
+  X" instruction is verified, not assumed.
   When your re-measurement contradicts a self-reported metric, write the measured value into the
   tracker (plan note, status column) — the child's version is a claim and the tracker is the record
   of fact; never keep the prettier of the two.
@@ -113,7 +157,9 @@ per dispatch:
   byte-identity diff against the source artifact — a length check alone hides a truncated copy. A
   phase that moves or renames a symbol gets a tree-wide grep for the OLD name, and that includes the
   spec/plan docs, not just the source tree: comments, test doubles and spec `refs:` outlive the code
-  that moved.
+  that moved. A module split or function move gets an `ast.unparse` identity comparison of every
+  moved function (rename-normalized), demanded in the brief and re-checked by the parent — reading
+  the diff of a 400-line split is how an altered default ships as "pure movement".
 - **Resolve conflicting state claims against the source of truth, not plausibility.** When a child
   reports a repo state that contradicts the parent's own snapshot (ahead-count, origin position),
   don't pick a winner by plausibility — `git reflog show origin/<branch>` names the ref's source
@@ -162,6 +208,10 @@ per dispatch:
   a real run through the new wiring, not just the suite.
 - Reverting a mutation with `git checkout` also discards the uncommitted work the round left in
   that file. `cp` the original to a scratch path before mutating and restore from the copy.
+- A mutation that removes a loop's termination guard hangs instead of failing, and the timeout
+  kills the shell BEFORE the restore line runs — the tree stays mutated. Mutate the
+  assertion-relevant branch (a status check returning `True`, a call deleted), never the
+  pagination/termination condition; put the restore in a separate call from the probe.
 - Make the test tree a package (`tests/__init__.py`) when helpers live in conftest and other
   files import them as `from tests.conftest import X`. Without the package init, pytest imports
   the same conftest under two module names and identity/`isinstance` checks across files
