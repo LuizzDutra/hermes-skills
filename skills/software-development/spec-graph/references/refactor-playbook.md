@@ -37,7 +37,7 @@ Run each new check **before** its step exists. A pending-work check must fail to
 A step too large for one turn splits across two subagents, with the gate kept by the parent.
 
 1. A **planning subagent** (read-only) writes a step plan to `.specs/<capability>/s<N>-plan.md`, measures a real baseline itself (collected counts, durations, coverage), classifies by content — not by file name — and closes with numbered Open Questions. Tell it the plan YAML is untouchable and that every number it reports must come from a command it actually ran.
-2. The owner validates, then an **execution subagent** commits one sub-step at a time, each green under the repo's own gate before the commit, staged by explicit path only.
+2. The owner validates, then an **execution subagent** implements one sub-step at a time, each green under the repo's own gate before it reports, staged by explicit path only. Who commits is set by the review cadence and stated in the brief: when the user gates each step ("revisei, commite e prossiga"), the child leaves the tree UNCOMMITTED and the parent commits after the user's go, then dispatches the next step — a child that commits has decided the review gate on the user's behalf. Autonomous long runs may let the executor commit per sub-step, but only when the brief says so.
 3. **Only the parent flips `status: done`**, after re-running the check itself — a child's self-report is not evidence. Re-derive the child's headline numbers from the repo (collected test count, the gate command's tail, coverage from the report file) before quoting them. When the re-derivation disagrees with the child's figure, write the **measured** value into the step's `note` and say which number moved: the child's figure is a claim, the file on disk is the fact. Never leave the prettier of the two in the plan. Re-run `spec_checks.py --render` after the flip.
 
 When the step closes a behaviour, the executor's brief carries the spec checkpoint as a deliverable:
@@ -59,6 +59,10 @@ Scope-verify the child's commit by the commit itself (`git show --stat <sha>`), 
 "No behaviour change" is verified from the diff, not from the green suite. `git diff <base>..HEAD -- <test root>` must contain zero changed `assert` lines, generated contract artifacts (OpenAPI JSON, goldens) must be byte-identical, and every hunk on the hot path must show imports swapped with call arguments preserved — a suite can stay green while a call site silently loses an argument.
 
 Read the hunks, not the summary. The diff of a few-line hot path fits on a screen and settles the question.
+
+For a module split or a moved function, prove identity by AST, not by eyeball: parse each moved function out of `git show <base>:<old module>` and out of the new module, `ast.unparse` both, and normalize a rename by swapping the old name for the new before comparing. One pass settles a 400-line split, and a hunk the eye glosses over — an altered default, a dropped guard — fails the comparison. Grep the old symbol tree-wide afterwards: a string-keyed test patch (`monkeypatch.setattr("pkg.mod.old_name", …)`) survives a rename at import time and only dies when the patched test runs.
+
+A rename drags the spec's `refs:` with it in the same commit: repoint the old symbol paths, leave `version` and `status` alone — a movement-only change has nothing to re-approve, so a version bump is noise that demands a review round for nothing — and let `spec_lint.py` be the detector of a ref left behind.
 
 ## Before moving a file any check cites
 

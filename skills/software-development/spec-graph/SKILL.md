@@ -1,7 +1,7 @@
 ---
 name: spec-graph
 description: "Behaviour specs as YAML + reviewable graph, before code."
-version: 1.7.0
+version: 1.7.4
 author: Hermes Agent
 license: MIT
 platforms: [linux, macos, windows]
@@ -192,7 +192,11 @@ The HTML is self-contained (no CDN) and adapts to the frame.
 | A precedence rule ("X prevalece sobre Y, o usuário não pode atropelar") lives only in prose the prompt carries | Enforcement is an invariant plus an observable `then` ("the revision does not replace the confirmed spec"); prose inside generated text is not a guarantee |
 | A plan or spec quotes a size or budget number | Measure it from the artifact (`wc -m`, script output) after the last edit; an estimate drifts from the file and misleads every implementer |
 | A plan step's Red expectation quotes a concrete number | Re-derive it from the constants before executing or dispatching; a literal executor ships the plan's wrong number as green tests |
+| A linked test for an event or fallback dubs the function that supplies the value | Trace the real call path before accepting it: a producer that collapses the value upstream (the reject case returning `None`) leaves the branch unreachable, and the dubbed test stays green forever — wire the test to the lowest real function in the path |
+| An approved cap covers only part of what the code composes (texts and separator, but the block also carries a header) | Re-derive the composed cap from every part that counts, disclose the changed number, and re-approve — the code must not enforce a larger limit than the approved spec states |
 | A graph that clips or looks dense at 960px | It pans and refits. Reshaping the spec for the picture changes the system being specified |
+| A test over a packaged catalog asserts exact membership | The catalog is designed to grow — assert the named entries as a subset plus per-entry invariants (id, digest, cap), or every legitimate addition fails the suite |
+| A fail-open branch never fired in tests because its trigger could not fire (one catalog entry, one mode) | Growth turns the branch on mid-suite: stub the external port fail-fast in the autouse fixture and pin the deterministic path with an explicit test, or every gate test pays the real client's retry budget against a dead host |
 
 ## Verification checklist
 
